@@ -1,0 +1,6 @@
+<launch>
+
+  <!--Aruco view service -->
+  <node pkg="turtlebro_excursions" type="aruco_service.py" name="aruco_detect_server" output="screen" required="true" />
+  
+</launch>
