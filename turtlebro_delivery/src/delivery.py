@@ -67,8 +67,8 @@ class DeliveryRobot():
         self.delivery_config = delivery_config
 
         self.rate = rospy.Rate(10)
-        self.client = dict()
-        self.state = 'product_wait'
+        self.client: dict = {}
+        self.state: str = 'product_wait'
 
         self.top_cap = TopCap()
         self.start_button = Button()
@@ -94,7 +94,8 @@ class DeliveryRobot():
             # точка загрузки, ждем код
             if self.state in ['product_wait']:
                 self.top_cap.open()
-                aruco_result = self.aruco_service.call(ArucoDetectRequest())
+
+                aruco_result: ArucoDetectResponse = self.aruco_service.call(ArucoDetectRequest())
 
                 if aruco_result.id > 0:
                     self.client = self._find_client_by_product(aruco_result.id)
@@ -123,14 +124,14 @@ class DeliveryRobot():
 
             # точка клиента, ждем аруко код
             if self.state == 'on_delivery_point' :   
-                aruco_result = self.aruco_service.call(ArucoDetectRequest())
+                aruco_result: ArucoDetectResponse = self.aruco_service.call(ArucoDetectRequest())
                 if aruco_result.id > 0:
                     # check client secret
                     if aruco_result.id == self.client['secret']:
                         rospy.loginfo(f"Client secret confirmed")   
                         self.state = "client_pickup_wait"  
                         self.top_cap.open()   
-                        self.client = dict()
+                        self.client = {}
                     else :
                         rospy.loginfo(f"Wrong client secret")      
 
@@ -148,8 +149,8 @@ class DeliveryRobot():
 
                     goal = self._goal_message_assemble(self.delivery_config['home']['pose'])
                     self.move_base_client.send_goal(goal, done_cb=self.move_home_cb)
-                    
-            # приехали на домой, переходим в ожидание загрузки
+
+            # приехали домой, переходим в ожидание загрузки
             if self.state == 'on_home_point':
                 self.top_cap.open()
                 self.state = 'product_wait'
