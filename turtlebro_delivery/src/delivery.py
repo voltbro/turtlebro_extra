@@ -1,19 +1,17 @@
 #!/usr/bin/env python3
 
-from unittest import removeResult
 import rospy, math
 
 import actionlib
 from actionlib_msgs.msg import GoalStatus
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 from std_msgs.msg import Int16
+from turtlebro_aruco.srv import ArucoDetect, ArucoDetectResponse, ArucoDetectRequest
+
 
 from config import config_raw
-
-#Import standard Pose msg types and TF transformation to deal with quaternions
 from tf.transformations import quaternion_from_euler
 
-from turtlebro_aruco.srv import ArucoDetect, ArucoDetectResponse, ArucoDetectRequest
 
 class TopCap():
     state = 'unknow'
@@ -150,7 +148,8 @@ class DeliveryRobot():
 
                     goal = self._goal_message_assemble(self.delivery_config['home']['pose'])
                     self.move_base_client.send_goal(goal, done_cb=self.move_home_cb)
-
+                    
+            # приехали на домой, переходим в ожидание загрузки
             if self.state == 'on_home_point':
                 self.top_cap.open()
                 self.state = 'product_wait'
