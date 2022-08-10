@@ -1,0 +1,13 @@
+
+[home]
+pose = {x = 0,y = 0, theta = 0 }
+
+[client1]
+pose = {x = 0.5,y = 0, theta = 90 }
+products = [55, 56]
+secret = 55
+
+[client2]
+pose = {x = 0.5,y = 0, theta = 90 }
+products = [50, 51]
+secret = 55

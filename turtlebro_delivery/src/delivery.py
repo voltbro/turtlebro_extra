@@ -1,11 +1,17 @@
 #!/usr/bin/env python3
 
-import rospy
+from unittest import removeResult
+import rospy, math
 
 import actionlib
 from actionlib_msgs.msg import GoalStatus
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 from std_msgs.msg import Int16
+
+from config import config_raw
+
+#Import standard Pose msg types and TF transformation to deal with quaternions
+from tf.transformations import quaternion_from_euler
 
 from turtlebro_aruco.srv import ArucoDetect, ArucoDetectResponse, ArucoDetectRequest
 
@@ -57,11 +63,15 @@ class Button():
         self.button = msg.data        
 
 class DeliveryRobot():
-    def __init__(self) -> None:
+    def __init__(self, delivery_config) -> None:
         rospy.on_shutdown(self.on_shutdown)
+
+        self.delivery_config = delivery_config
+
         self.rate = rospy.Rate(10)
-        self.product_id = 0
+        self.client = dict()
         self.state = 'product_wait'
+
         self.top_cap = TopCap()
         self.start_button = Button()
 
@@ -87,10 +97,15 @@ class DeliveryRobot():
             if self.state in ['product_wait']:
                 self.top_cap.open()
                 aruco_result = self.aruco_service.call(ArucoDetectRequest())
+
                 if aruco_result.id > 0:
-                    self.product_id = aruco_result.id
-                    self.state = "start_button_wait"
-                    rospy.loginfo(f"Have product: {self.product_id}")
+                    self.client = self._find_client_by_product(aruco_result.id)
+
+                    if self.client:
+                        self.state = "start_button_wait"
+                        rospy.loginfo(f"Have {self.client['name']} product: {aruco_result.id}")
+                    else:
+                        rospy.loginfo(f"No client for product {aruco_result.id}")  
 
             # точка загрузки, ждем нажатие кнопки
             if self.state == 'start_button_wait' :
@@ -102,20 +117,24 @@ class DeliveryRobot():
             if self.state == 'home_cap_close_wait' :
                 if self.top_cap.is_closed():
                     self.state = 'move_to_delivery_point'
-                    rospy.loginfo(f"On client way")
+                    
+                    rospy.loginfo(f"On {self.client['name']} way")
 
-                    # TODO resolve clients points
-                    goal = MoveBaseGoal()
+                    goal = self._goal_message_assemble(self.client['pose'])
                     self.move_base_client.send_goal(goal, done_cb=self.move_client_cb)
 
             # точка клиента, ждем аруко код
             if self.state == 'on_delivery_point' :   
                 aruco_result = self.aruco_service.call(ArucoDetectRequest())
                 if aruco_result.id > 0:
-                    # TODO add client check
-                    if aruco_result.id == 55:
+                    # check client secret
+                    if aruco_result.id == self.client['secret']:
+                        rospy.loginfo(f"Client secret confirmed")   
                         self.state = "client_pickup_wait"  
                         self.top_cap.open()   
+                        self.client = dict()
+                    else :
+                        rospy.loginfo(f"Wrong client secret")      
 
             # точка клиента, ждем когда заберут и нажмут кнопку
             if self.state == 'client_pickup_wait' : 
@@ -129,12 +148,13 @@ class DeliveryRobot():
                     self.state = 'move_to_home_point'
                     rospy.loginfo(f"On home way")
 
-                    goal = MoveBaseGoal()
+                    goal = self._goal_message_assemble(self.delivery_config['home']['pose'])
                     self.move_base_client.send_goal(goal, done_cb=self.move_home_cb)
 
             if self.state == 'on_home_point':
                 self.top_cap.open()
                 self.state = 'product_wait'
+                rospy.loginfo(f"Waiting for new delivery")
            
             self.rate.sleep()
 
@@ -158,11 +178,40 @@ class DeliveryRobot():
             rospy.loginfo("Move to home point reached")            
             self.state = "on_home_point"
 
+
+    def _find_client_by_product(self, product) -> dict():
+        for key,value in self.delivery_config.items():
+            if key != 'home':
+                if product in value['products']: 
+                    value['name'] = key
+                    return value
+
+        return dict()    
+
+    def _goal_message_assemble(self, pose):
+        # Creates a new goal with the MoveBaseGoal constructor
+        goal = MoveBaseGoal()
+        # Move to x, y meters of the "map" coordinate frame 
+        goal.target_pose.header.frame_id = "map"
+        goal.target_pose.header.stamp = rospy.Time.now()
+        goal.target_pose.pose.position.x = float(pose['x'])
+        goal.target_pose.pose.position.y = float(pose['y'])
+
+        q = quaternion_from_euler(0, 0, math.radians(float(pose['theta']))) 
+    
+        goal.target_pose.pose.orientation.x = q[0]
+        goal.target_pose.pose.orientation.y = q[1]
+        goal.target_pose.pose.orientation.z = q[2]
+        goal.target_pose.pose.orientation.w = q[3]
+
+        rospy.loginfo("Created goal from point {} ".format(pose))
+
+        return goal                
+
     def on_shutdown(self):
         
         rospy.loginfo("Shutdown Delivery bot")
-        # self.cmd_pub.publish(Twist()) 
-        # self.client.action_client.stop()
+        self.move_base_client.action_client.stop()
         rospy.sleep(0.5)    
 
 
@@ -170,7 +219,7 @@ class DeliveryRobot():
 if __name__ == '__main__':
     try:
         rospy.init_node('delivery_node')
-        robot = DeliveryRobot()
+        robot = DeliveryRobot(delivery_config=config_raw)
         robot.spin()
 
     except rospy.ROSInterruptException:
