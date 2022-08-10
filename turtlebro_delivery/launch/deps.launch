@@ -1,0 +1,24 @@
+<launch>
+  <!-- Arguments -->
+  <!-- <arg name="waypoints_data_file" default="$(find turtlebro_patrol)/data/goals.xml" /> -->
+  <arg name="fake_move_base" default="true"/>
+
+  <!-- Speech point service
+  <node pkg="turtlebro_excursions" type="point_service.py" name="excursion_point_service" output="screen" required="true" /> -->
+
+  <!-- Run Aruco service -->
+  <node pkg="turtlebro_aruco" type="aruco_service.py" name="aruco_service" output="screen" required="true" />
+
+  <!-- Run fake move base -->
+  <group if="$(arg fake_move_base)">
+    <node pkg="turtlebro_navigation" type="fake_move_base.py" name="fake_move_base" output="screen" required="true"/>
+  </group>
+
+  <!-- Or run Navigation -->
+  <group unless="$(arg fake_move_base)">  
+    <include file="$(find turtlebro_navigation)/launch/turtlebro_slam_navigation.launch">
+        <arg name="open_rviz" value="False"/>
+    </include>
+  </group>
+
+</launch>

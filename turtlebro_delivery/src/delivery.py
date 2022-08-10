@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import rospy
 
 import actionlib
@@ -68,6 +70,12 @@ class DeliveryRobot():
         self.aruco_service.wait_for_service()
         rospy.loginfo(f"Have aruco service")
 
+
+        self.move_base_client = actionlib.SimpleActionClient('move_base', MoveBaseAction)
+        rospy.loginfo("Waiting move_base action")
+        self.move_base_client.wait_for_server()
+        rospy.loginfo(f"Have move_base action")
+
         rospy.sleep(1)
         rospy.loginfo("Init done")
 
@@ -75,7 +83,8 @@ class DeliveryRobot():
 
         while not rospy.is_shutdown():
 
-            if self.state in ['product_wait','start_button_wait']:
+            # точка загрузки, ждем код
+            if self.state in ['product_wait']:
                 self.top_cap.open()
                 aruco_result = self.aruco_service.call(ArucoDetectRequest())
                 if aruco_result.id > 0:
@@ -83,18 +92,71 @@ class DeliveryRobot():
                     self.state = "start_button_wait"
                     rospy.loginfo(f"Have product: {self.product_id}")
 
+            # точка загрузки, ждем нажатие кнопки
             if self.state == 'start_button_wait' :
                 if self.start_button.is_pressed():
-                    self.state = 'cap_close_wait'
+                    self.state = 'home_cap_close_wait'
                     self.top_cap.close()
 
-            if self.state == 'cap_close_wait' :
+            # точка загрузки, ждем закрытие крышки и едем
+            if self.state == 'home_cap_close_wait' :
                 if self.top_cap.is_closed():
-                    self.state = 'on_movement'
-                    #todo add movment action call
-                    rospy.loginfo(f"On my way")
+                    self.state = 'move_to_delivery_point'
+                    rospy.loginfo(f"On client way")
 
+                    # TODO resolve clients points
+                    goal = MoveBaseGoal()
+                    self.move_base_client.send_goal(goal, done_cb=self.move_client_cb)
+
+            # точка клиента, ждем аруко код
+            if self.state == 'on_delivery_point' :   
+                aruco_result = self.aruco_service.call(ArucoDetectRequest())
+                if aruco_result.id > 0:
+                    # TODO add client check
+                    if aruco_result.id == 55:
+                        self.state = "client_pickup_wait"  
+                        self.top_cap.open()   
+
+            # точка клиента, ждем когда заберут и нажмут кнопку
+            if self.state == 'client_pickup_wait' : 
+                if self.start_button.is_pressed():
+                    self.state = 'client_cap_close_wait'
+                    self.top_cap.close()
+
+            # точка клиента, ждем когда крышка будет закрыта и едем домой
+            if self.state == 'client_cap_close_wait' :        
+                    self.top_cap.close()
+                    self.state = 'move_to_home_point'
+                    rospy.loginfo(f"On home way")
+
+                    goal = MoveBaseGoal()
+                    self.move_base_client.send_goal(goal, done_cb=self.move_home_cb)
+
+            if self.state == 'on_home_point':
+                self.top_cap.open()
+                self.state = 'product_wait'
+           
             self.rate.sleep()
+
+    def move_client_cb(self, status, result):
+
+        if status == GoalStatus.PREEMPTED:
+            rospy.loginfo("Delivery point cancelled")
+            self.state = "product_wait"
+
+        if status == GoalStatus.SUCCEEDED:
+            rospy.loginfo("Delivery point reached")            
+            self.state = "on_delivery_point"
+
+    def move_home_cb(self, status, result):
+
+        if status == GoalStatus.PREEMPTED:
+            rospy.loginfo("Move to home point cancelled")
+            self.state = "product_wait"
+
+        if status == GoalStatus.SUCCEEDED:
+            rospy.loginfo("Move to home point reached")            
+            self.state = "on_home_point"
 
     def on_shutdown(self):
         
