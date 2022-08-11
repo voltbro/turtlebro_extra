@@ -5,86 +5,16 @@ import rospy, math
 import actionlib
 from actionlib_msgs.msg import GoalStatus
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
-from std_msgs.msg import Int16
 from turtlebro_aruco.srv import ArucoDetect, ArucoDetectResponse, ArucoDetectRequest
-from turtlebro_speech.srv import Speech, SpeechResponse, SpeechRequest
 
-
-from config import config_raw, speech_data
+from config import config_raw, speech_params
+from devices import Button, TopCap
+from speech_client import SpeechClient
 from tf.transformations import quaternion_from_euler
-
-
-class TopCap():
-    state = 'unknow'
-    end_switch = 0
-
-    def __init__(self) -> None:
-
-        self.end_switch_sub = rospy.Subscriber("/end_switch", Int16, self.end_switch_cb)
-        self.top_cap_pub    = rospy.Publisher("/top_cap", Int16, queue_size=5)
-        
-        rospy.sleep(1)
-        rospy.loginfo("TopCap init done")
-
-        self.open()
-
-
-    def open(self):
-        if self.state != 'open':
-            rospy.loginfo('Open top cap')
-            self.state = 'open'
-            self.top_cap_pub.publish(1)
-
-    def close(self):
-        if self.state == 'open':
-            rospy.loginfo('Close top cap')
-            self.state = 'closed'
-            self.top_cap_pub.publish(0)
-
-    def is_closed(self):
-        return bool(self.end_switch)    
-
-    def end_switch_cb(self, msg):
-        self.end_switch = msg.data
-
-class Button():
-
-    button = 0
-
-    def __init__(self) -> None:
-        self.sub = rospy.Subscriber("/top_button", Int16, self.button_cb)
-        rospy.loginfo("TopButton init done")
-
-    def is_pressed(self):            
-        return bool(self.button)
-
-    def button_cb(self, msg):
-        self.button = msg.data   
-
-class SpeechClient():
-
-    def __init__(self) -> None:
-
-        self.speech_data = speech_data
-
-        self.speech_service = rospy.ServiceProxy('festival_speech', Speech)
-        rospy.loginfo(f"Waiting for festival_speech service")
-        self.speech_service.wait_for_service()
-        rospy.loginfo(f"Have festival_speech service")  
-
-    def say(self, msg):
-
-        if msg in self.speech_data:
-            text = self.speech_data[msg]
-        else :
-            text = "Ошибка сообщения"    
-        result: SpeechResponse = self.speech_service.call(SpeechRequest(data = text))
-
-
-                     
+   
 
 class DeliveryRobot():
-    def __init__(self, delivery_config) -> None:
+    def __init__(self, delivery_config, speech_params) -> None:
         rospy.on_shutdown(self.on_shutdown)
 
         self.delivery_config = delivery_config
@@ -95,7 +25,7 @@ class DeliveryRobot():
 
         self.top_cap = TopCap()
         self.start_button = Button()
-        self.speech = SpeechClient()
+        self.speech = SpeechClient(speech_params)
 
         self.aruco_service = rospy.ServiceProxy('aruco_detect', ArucoDetect)
         rospy.loginfo(f"Waiting for aruco service")
@@ -256,7 +186,11 @@ class DeliveryRobot():
 if __name__ == '__main__':
     try:
         rospy.init_node('delivery_node')
-        robot = DeliveryRobot(delivery_config=config_raw)
+
+        robot = DeliveryRobot(
+                    delivery_config = config_raw,
+                    speech_params = speech_params)
+
         robot.spin()
 
     except rospy.ROSInterruptException:
