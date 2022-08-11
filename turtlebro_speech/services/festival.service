@@ -1,0 +1,15 @@
+[Unit]
+Description="Festival tts service file"
+After=getty.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/festival --server --tts --language russian
+User=root
+Group=root
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
