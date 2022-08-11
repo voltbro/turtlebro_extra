@@ -9,6 +9,10 @@
   <!-- Run Aruco service -->
   <node pkg="turtlebro_aruco" type="aruco_service.py" name="aruco_service" output="screen" required="true" />
 
+  <!-- Run Aruco service -->
+  <node pkg="turtlebro_speech" type="speech_service.py" name="speech_service" output="screen" required="true" />
+
+
   <!-- Run fake move base -->
   <group if="$(arg fake_move_base)">
     <node pkg="turtlebro_navigation" type="fake_move_base.py" name="fake_move_base" output="screen" required="true"/>

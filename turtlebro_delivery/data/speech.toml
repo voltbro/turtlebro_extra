@@ -1,0 +1,13 @@
+start = "Готов к работе"
+have_product = "Положите товар в коробку"
+have_product_error = "Неизвестный товар"
+
+move_to_delivery_point = "Отправляемся к клиенту"
+
+on_delivery_point = "Покажите код для получения вашего заказа"
+
+client_pickup_wait = "Код принят, заберите заказ"
+
+move_to_home_point = "Спасибо, до скорой встречи"
+
+delivery_error = "Ошибка доставки"

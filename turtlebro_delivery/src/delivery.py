@@ -7,9 +7,10 @@ from actionlib_msgs.msg import GoalStatus
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 from std_msgs.msg import Int16
 from turtlebro_aruco.srv import ArucoDetect, ArucoDetectResponse, ArucoDetectRequest
+from turtlebro_speech.srv import Speech, SpeechResponse, SpeechRequest
 
 
-from config import config_raw
+from config import config_raw, speech_data
 from tf.transformations import quaternion_from_euler
 
 
@@ -58,7 +59,29 @@ class Button():
         return bool(self.button)
 
     def button_cb(self, msg):
-        self.button = msg.data        
+        self.button = msg.data   
+
+class SpeechClient():
+
+    def __init__(self) -> None:
+
+        self.speech_data = speech_data
+
+        self.speech_service = rospy.ServiceProxy('festival_speech', Speech)
+        rospy.loginfo(f"Waiting for festival_speech service")
+        self.speech_service.wait_for_service()
+        rospy.loginfo(f"Have festival_speech service")  
+
+    def say(self, msg):
+
+        if msg in self.speech_data:
+            text = self.speech_data[msg]
+        else :
+            text = "Ошибка сообщения"    
+        result: SpeechResponse = self.speech_service.call(SpeechRequest(data = text))
+
+
+                     
 
 class DeliveryRobot():
     def __init__(self, delivery_config) -> None:
@@ -66,12 +89,13 @@ class DeliveryRobot():
 
         self.delivery_config = delivery_config
 
-        self.rate = rospy.Rate(10)
+        self.rate = rospy.Rate(5)
         self.client: dict = {}
         self.state: str = 'product_wait'
 
         self.top_cap = TopCap()
         self.start_button = Button()
+        self.speech = SpeechClient()
 
         self.aruco_service = rospy.ServiceProxy('aruco_detect', ArucoDetect)
         rospy.loginfo(f"Waiting for aruco service")
@@ -84,14 +108,17 @@ class DeliveryRobot():
         self.move_base_client.wait_for_server()
         rospy.loginfo(f"Have move_base action")
 
-        rospy.sleep(1)
+        # rospy.sleep(1)
+        self.speech.say('start')
         rospy.loginfo("Init done")
+
+
 
     def spin(self):
 
         while not rospy.is_shutdown():
 
-            # точка загрузки, ждем код
+            # точка загрузки, ждем код в камеру
             if self.state in ['product_wait']:
                 self.top_cap.open()
 
@@ -103,8 +130,10 @@ class DeliveryRobot():
                     if self.client:
                         self.state = "start_button_wait"
                         rospy.loginfo(f"Have {self.client['name']} product: {aruco_result.id}")
+                        self.speech.say('have_product')
                     else:
                         rospy.loginfo(f"No client for product {aruco_result.id}")  
+                        self.speech.say('have_product_error')
 
             # точка загрузки, ждем нажатие кнопки
             if self.state == 'start_button_wait' :
@@ -116,7 +145,8 @@ class DeliveryRobot():
             if self.state == 'home_cap_close_wait' :
                 if self.top_cap.is_closed():
                     self.state = 'move_to_delivery_point'
-                    
+
+                    self.speech.say('move_to_delivery_point')
                     rospy.loginfo(f"On {self.client['name']} way")
 
                     goal = self._goal_message_assemble(self.client['pose'])
@@ -132,6 +162,7 @@ class DeliveryRobot():
                         self.state = "client_pickup_wait"  
                         self.top_cap.open()   
                         self.client = {}
+                        self.speech.say('client_pickup_wait') 
                     else :
                         rospy.loginfo(f"Wrong client secret")      
 
@@ -145,6 +176,7 @@ class DeliveryRobot():
             if self.state == 'client_cap_close_wait' :        
                     self.top_cap.close()
                     self.state = 'move_to_home_point'
+                    self.speech.say("move_to_home_point")
                     rospy.loginfo(f"On home way")
 
                     goal = self._goal_message_assemble(self.delivery_config['home']['pose'])
@@ -154,6 +186,7 @@ class DeliveryRobot():
             if self.state == 'on_home_point':
                 self.top_cap.open()
                 self.state = 'product_wait'
+                self.speech.say('start')
                 rospy.loginfo(f"Waiting for new delivery")
            
             self.rate.sleep()
@@ -163,9 +196,12 @@ class DeliveryRobot():
         if status == GoalStatus.PREEMPTED:
             rospy.loginfo("Delivery point cancelled")
             self.state = "product_wait"
+            self.speech.say('delivery_error')   
+            
 
         if status == GoalStatus.SUCCEEDED:
-            rospy.loginfo("Delivery point reached")            
+            rospy.loginfo("Delivery point reached")
+            self.speech.say('on_delivery_point')            
             self.state = "on_delivery_point"
 
     def move_home_cb(self, status, result):
@@ -173,6 +209,7 @@ class DeliveryRobot():
         if status == GoalStatus.PREEMPTED:
             rospy.loginfo("Move to home point cancelled")
             self.state = "product_wait"
+            self.speech.say('delivery_error')   
 
         if status == GoalStatus.SUCCEEDED:
             rospy.loginfo("Move to home point reached")            
