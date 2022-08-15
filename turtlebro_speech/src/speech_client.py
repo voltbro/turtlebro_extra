@@ -21,6 +21,6 @@ class SpeechClient():
 rospy.init_node('festival_speech_client')
 
 speech = SpeechClient()
-speech.say("Привет мир")
+global_state("Привет мир")
 
 rospy.sleep(2)

@@ -1,15 +1,17 @@
 [config]
-need_speech = true
-debug_text = true
+need_speech = false # Нужно ли проговаривать слова
+debug_text = true # Выводить текст на экран
 
 # Переменный что говорим
 [text]
-start = "Готов к работе"
+robot_start = "Готов к работе" # Сообщение при включении робота
+product_wait = "Отсканируйте новый товар"
 have_product = "Положите товар в коробку"
 have_product_error = "Неизвестный товар"
 move_to_delivery_point = "Отправляемся к клиенту"
 on_delivery_point = "Покажите код для получения вашего заказа"
 client_pickup_wait = "Код принят, заберите заказ"
+client_pickup_error = "Неправильный код" # Ошибка при получения товара
 move_to_home_point = "Спасибо, до скорой встречи"
 
 delivery_error = "Ошибка доставки"

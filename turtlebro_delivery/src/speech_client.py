@@ -2,15 +2,20 @@
 
 import rospy, toml
 from turtlebro_speech.srv import Speech, SpeechResponse, SpeechRequest
-
+from pathlib import Path
 
 class SpeechClient():
 
-    def __init__(self, params) -> None:
+    def __init__(self) -> None:
 
+        speech_config_file = rospy.get_param('~speech_config_file', str(
+                Path(__file__).parent.absolute()) + '/../data/speech.toml')
 
-        self.text = params['text']
-        self.config = params['config']
+        speech_config = toml.load(speech_config_file)
+        rospy.loginfo(f"Loading speech file {speech_config_file}")
+
+        self.text = speech_config['text']
+        self.config = speech_config['config']
 
         if self.config['need_speech']:
             self.speech_service = rospy.ServiceProxy('festival_speech', Speech)
@@ -20,21 +25,16 @@ class SpeechClient():
         else:
             rospy.loginfo(f"Speech client not init")    
 
-    def say(self, msg):
+    def say(self, state):
 
-        if msg in self.text:
-            text = self.text[msg]
+        if state in self.text:
+            if self.config['debug_text']:
+                rospy.loginfo(f"SpeechClient: text: {self.text[state]}")             
+
+            if self.config['need_speech']:      
+                result: SpeechResponse = self.speech_service.call(SpeechRequest(data = self.text[state]))
         else :
-            text = "Ошибка сообщения"  
-
-        if self.config['debug_text']:
-            rospy.loginfo(f"Speech text: {text}")             
-
-        if self.config['need_speech']:      
-            result: SpeechResponse = self.speech_service.call(SpeechRequest(data = text))
-
+            rospy.loginfo("SpeechClient: No state message")
             
 if __name__ == '__main__':
-
-    params = toml.load('../data/speech.toml')
-    speech_client = SpeechClient(params)
+    speech_client = SpeechClient()
