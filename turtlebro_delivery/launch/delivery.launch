@@ -2,7 +2,7 @@
   <!-- Arguments -->
   <arg name="fake_move_base" default="true"/>
 
-  <include file="$(find turtlebro_delivery)/launch/deps.launch"></include>  
+  <include file="$(find turtlebro_delivery)/launch/delivery_deps.launch"></include>  
 
   <!-- Run Aruco service -->
   <node pkg="turtlebro_delivery" type="delivery.py" name="delivery_node" output="screen" required="true" />
