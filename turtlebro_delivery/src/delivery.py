@@ -91,12 +91,12 @@ class DeliveryRobot():
                     # check client secret
                     if aruco_result.id == self.client['secret']:
                         rospy.loginfo(f"Client secret confirmed")
-                        self.set_state('client_pickup_wait')
                         self.top_cap.open()
                         self.client = {}
+                        self.set_state('client_pickup_wait')
                     else:
-                        self.set_state('client_pickup_error')
                         rospy.loginfo(f"Wrong client secret")
+                        self.set_state('client_pickup_error')
 
             # точка клиента, ждем когда заберут и нажмут кнопку
             if self.state == 'client_pickup_wait':
