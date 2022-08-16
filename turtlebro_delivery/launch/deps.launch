@@ -1,17 +1,12 @@
 <launch>
   <!-- Arguments -->
-  <!-- <arg name="waypoints_data_file" default="$(find turtlebro_patrol)/data/goals.xml" /> -->
-  <arg name="fake_move_base" default="true"/>
-
-  <!-- Speech point service
-  <node pkg="turtlebro_excursions" type="point_service.py" name="excursion_point_service" output="screen" required="true" /> -->
+  <arg name="fake_move_base" default="false"/>
 
   <!-- Run Aruco service -->
   <node pkg="turtlebro_aruco" type="aruco_service.py" name="aruco_service" output="screen" required="true" />
 
   <!-- Run Speech service -->
   <node pkg="turtlebro_speech" type="speech_service.py" name="speech_service" output="screen" required="true" />
-
 
   <!-- Run fake move base -->
   <group if="$(arg fake_move_base)">

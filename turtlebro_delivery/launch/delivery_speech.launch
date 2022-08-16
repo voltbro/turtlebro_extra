@@ -1,9 +1,10 @@
 <launch>
-  <!-- Arguments -->
-  <arg name="fake_move_base" default="true"/>
-
-  <include file="$(find turtlebro_delivery)/launch/deps.launch"></include>  
-
+  <arg name="fake_move_base" default="false"/>
+  
+  <include file="$(find turtlebro_delivery)/launch/deps.launch">
+    <arg name="fake_move_base" value="$(arg fake_move_base)"/>
+  </include>  
+  
   <!-- Run Aruco service -->
   <node pkg="turtlebro_delivery" type="delivery_speech.py" name="delivery_speech_node" output="screen" required="true" />
 </launch>
