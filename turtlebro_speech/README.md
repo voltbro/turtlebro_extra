@@ -34,9 +34,10 @@ alsamixer
 
 ### Включить автозагрузку festival
 
+```
 sudo systemctl start festival
 sudo systemctl enable festival
-
+```
 
 ### Проверить сервер
 ```
