@@ -28,11 +28,11 @@ __Настройка громкости динамика__
 alsamixer
 ```
 
-## Подключение к робот
+## Настройка festival для работы пакета
 
-Для работы необходимо чтобы festival сервер быз запущен через systemd
+Для правильной работы пакета turtlebro_speech, необходимо чтобы ```festival``` быз запущен как сервис ```systemd```
 
-### Включить автозагрузку festival
+### Запуск сервиса festival
 
 Проверьте что файл ```festival.service``` находится в директории ```/lib/systemd/system```
 
@@ -48,7 +48,7 @@ sudo systemctl start festival
 sudo systemctl enable festival
 ```
 
-### Проверить сервер
+### Проверить работу сервиса
 ```
 echo '(SayText "Привет мир")' | festival_client
 ```
