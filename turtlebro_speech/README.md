@@ -34,6 +34,15 @@ alsamixer
 
 ### Включить автозагрузку festival
 
+Проверьте что файл ```festival.service``` находится в директории ```/lib/systemd/system```
+
+Или скопируйте его туда
+```
+sudo cp services/festival.service /lib/systemd/system/festival.service
+```
+
+
+Включть сервис ```festival```
 ```
 sudo systemctl start festival
 sudo systemctl enable festival
