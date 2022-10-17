@@ -53,6 +53,27 @@ pip3 install -r turtlebro_extra/turtlebro_delivery/requirements.txt
 
 Конфигурирование параметров робота-курьера происходит в файле `data/delivery.toml`
 
+### Описание файла конфигурации доставки
+
+Файл конфигурации располагается по следующему пути:
+
+```
+/home/pi/catkin_ws/src/turtlebro_extra/turtlebro_delivery/data/delivery.toml
+```
+В данном файле вы можете задать координаты "склада загрузки товаров":
+
+```
+[home]
+pose = {x = 0,y = 0, theta = 0 }
+```
+
+Также можете добавлять "клиентов". В форму "клиента" входят следующие параметры:
+
+```
+1. pose = {x,y,theta} - задаются координаты "клиента"
+2. products = [aruco_id] - задаются aruco_id товара/товаров для данного "клиента". Может быть несколько товаров для одного клиента.
+3. secret = [aruco_id] - задается aruco_id "клиента", по которому будет выдан заказ. Может совпадать с aruco_id товара.
+```
 
 ### Запуск доставки
 
@@ -62,7 +83,7 @@ pip3 install -r turtlebro_extra/turtlebro_delivery/requirements.txt
 roslaunch turtlebro_delivery delivery.launch
 ```
 
-Для отладки кода есть возможность эмулировать работу без подключения навигации и реального перемещения роботы. Для этого необходимо установить агрумент  `fake_move_base`
+Для отладки кода есть возможность эмулировать работу без подключения навигации и реального перемещения робота. Для этого необходимо установить агрумент  `fake_move_base`:
 
 ```
 roslaunch turtlebro_delivery delivery.launch fake_move_base:=true
@@ -72,7 +93,7 @@ roslaunch turtlebro_delivery delivery.launch fake_move_base:=true
 
 Для подключения колонки к роботу, необходимо убедиться что правильно установлен пакет `turtlebro_speech` (https://github.com/voltbro/turtlebro_extra/tree/master/turtlebro_speech) из метапакета `turtlebro_extra`
 
-Запуск доставки с озвучкой статусов
+Запуск доставки с озвучкой статусов:
 
 ```
 roslaunch turtlebro_delivery delivery_speech.launch
