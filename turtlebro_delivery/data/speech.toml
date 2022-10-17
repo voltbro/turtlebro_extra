@@ -6,7 +6,7 @@ debug_text = true # Выводить текст на экран
 [text]
 robot_start = "Готов к работе" # Сообщение при включении робота
 product_wait = "Отсканируйте новый товар"
-have_product = "Положите товар в коробку"
+have_product = "Пало жите товар в коро бку"
 have_product_error = "Неизвестный товар"
 move_to_delivery_point = "Отправляемся к клиенту"
 on_delivery_point = "Покажите код для получения вашего заказа"
