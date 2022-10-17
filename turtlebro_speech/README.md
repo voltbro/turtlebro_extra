@@ -1,15 +1,17 @@
 
+## Инструкция пакета turtlebro_speech
 
-## Говорилка через festival
+Пакет предназначен для озвучивания статуса работы робота Turtlebro с расширением "Робот-курьер"
 
-Перед установкой пакета необходимо установить системный пакет `festvox-ru`
+Перед установкой пакета необходимо установить системный пакет `festvox-ru`:
 
 ```
 sudo apt install festvox-ru
 ```
 
-#### Установить пакет ROS 
+#### Установка пакета в ROS 
 
+Для установки данного пакета на робота Turtlebro воспользуйтесь следующей командой:
 ```
 cd ~/catkin_ws/src
 git clone https://github.com/voltbro/turtlebro_extra
@@ -17,8 +19,9 @@ cd ../
 catkin_make --pkg turtlebro_speech
 ```
 
-### Тестирование установки text-to-speech
+### Тестирование установки с помощью text-to-speech
 
+Для того, чтобы проверить работоспособность колонки, а также корректность установки системного пакета `festvox-ru`, можно воспользоваться технологией text-to-speech:
 ```
 echo "Однажды, в студеную зимнюю пору Я из лесу вышел. Был сильный мороз." | festival --tts --language russian
 ```
@@ -36,19 +39,19 @@ alsamixer
 
 Проверьте что файл ```festival.service``` находится в директории ```/lib/systemd/system```
 
-Или скопируйте его туда
+В случае, если данного файла там нет, вы можете вручную скопировать его в необходимую директорию воспользовавшись командой:
 ```
-sudo cp services/festival.service /lib/systemd/system/festival.service
+sudo cp /home/pi/catkin_ws/src/turtlebro_extra/turtlebro_speech/services/festival.service /lib/systemd/system/festival.service
 ```
 
 
-Включть сервис ```festival```
+Включить сервис ```festival```:
 ```
 sudo systemctl start festival
 sudo systemctl enable festival
 ```
 
-### Проверить работу сервиса
+### Проверить работу сервиса:
 ```
 echo '(SayText "Привет мир")' | festival_client
 ```
