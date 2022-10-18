@@ -1,0 +1,4 @@
+<launch>
+  <!-- Run Speech service -->
+  <node pkg="turtlebro_speech" type="speech_service.py" name="speech_service" output="screen" required="true" />
+</launch>  
