@@ -23,7 +23,6 @@
   <exec_depend>turtlebro_aruco</exec_depend>
   <exec_depend>turtlebro_delivery</exec_depend>
   <exec_depend>turtlebro_speech</exec_depend>
-  <exec_depend>turtlebro_patrol</exec_depend>
 
   <!-- The export tag contains other, unspecified, tags -->
   <export>
