@@ -1,0 +1,33 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>turtlebro_extra</name>
+  <version>0.0.1</version>
+  <description>The turtlebro_extra package</description>
+
+  <!-- One maintainer tag required, multiple allowed, one person per tag -->
+  <!-- Example:  -->
+  <!-- <maintainer email="jane.doe@example.com">Jane Doe</maintainer> -->
+  <maintainer email="cola@cactus.ru">Nikolay Slabukha</maintainer>
+
+
+  <!-- One license tag required, multiple allowed, one license per tag -->
+  <!-- Commonly used license strings: -->
+  <!--   BSD, MIT, Boost Software License, GPLv2, GPLv3, LGPLv2.1, LGPLv3 -->
+  <license>TODO</license>
+
+
+  <author email="cola@cactus.ru">Nikolay Slabukha</author> -->
+  <author email="nikolay.ivanov@voltbro.com">Nikolay Ivanov</author> -->
+
+  <buildtool_depend>catkin</buildtool_depend>
+  <exec_depend>turtlebro_aruco</exec_depend>
+  <exec_depend>turtlebro_delivery</exec_depend>
+  <exec_depend>turtlebro_speech</exec_depend>
+  <exec_depend>turtlebro_patrol</exec_depend>
+
+  <!-- The export tag contains other, unspecified, tags -->
+  <export>
+    <!-- Other tools can request additional information be placed here -->
+    <metapackage/>
+  </export>
+</package>
