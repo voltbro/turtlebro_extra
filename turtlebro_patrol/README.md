@@ -47,9 +47,8 @@ _Важное примечание!_
 помните, что **ось x** направлена вперед для робота, а **ось y** - влево для робота. 
 "Theta" должна быть установлена в градусах и направлена по правилу правой руки:
 
-![screenshot of sample] (https://2.downloader.disk.yandex.ru/preview/c15743b31986a9b90d220a320e1071f9f6d04360e87ee3565abc5e774973aac4/inf/Jde04pTzavkgJ1XLLYpcugzdEN7C0f6ftKDJ61k_XuNAfPPYu_GusphWqHiBvBqZaJoPpx74D6azr-msnTGrTg%3D%3D?uid=51578132&filename=%D0%9D%D0%B0%D0%BF%D1%80%D0%B0%D0%B2%D0%BB%D0%B5%D0%BD%D0%B8%D0%B5%20%D0%BE%D1%81%D0%B5%D0%B9.jpg&disposition=inline&hash=&limit=0&content_type=image%2Fjpeg&owner_uid=51578132&tknv=v2&size=1920x872)
+![Направление осей робота](https://2.downloader.disk.yandex.ru/preview/c15743b31986a9b90d220a320e1071f9f6d04360e87ee3565abc5e774973aac4/inf/Jde04pTzavkgJ1XLLYpcugzdEN7C0f6ftKDJ61k_XuNAfPPYu_GusphWqHiBvBqZaJoPpx74D6azr-msnTGrTg%3D%3D?uid=51578132&filename=%D0%9D%D0%B0%D0%BF%D1%80%D0%B0%D0%B2%D0%BB%D0%B5%D0%BD%D0%B8%D0%B5%20%D0%BE%D1%81%D0%B5%D0%B9.jpg&disposition=inline&hash=&limit=0&content_type=image%2Fjpeg&owner_uid=51578132&tknv=v2&size=1920x872)
 
-![Иллюстрация к проекту](https://github.com/jon/coolproject/raw/master/image/image.png)
 
 ### Patrol control
 The control of the patrol bot is performed by sending messages of the std_msgs/String type to the topic /patrol_control
