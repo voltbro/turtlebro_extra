@@ -1,39 +1,39 @@
-## Инструкция пакета turtlebro_delivery
+# Пакет робота курьера turtlebro_delivery для робота TurtleBro 
 
-Пакет предназначен для работы робота Turtlebro с расширением "Робот-курьер".
+Пакет предназначен для работы робота Turtlebro с комплектом расширения для сборки полезной нагрузки "Робот-курьер".
+[Инструкция по сборке полезной нагрузки](http://docs.voltbro.ru/Set-WS2023/DeliveryTB-manual.pdf)
 
-### Установка пакета ROS
+## Установка пакета
 
-Пакет `turtlebro_delivery` устанавливается при установке метапакета `turtlebro_extra` https://github.com/voltbro/turtlebro_extra
+Пакет входит в сборку метапакета `turtlebro_extra` и устанавливается автоматически при установке этого пакета. Для установки метапакета на роботе выполните команды:
 
-__Установка метапакета__ 
 ```
 cd ~/catkin_ws/src
 git clone https://github.com/voltbro/turtlebro_extra
 cd ../
-catkin_make
+catkin_make --pkg=turtlebro_extra
 ```
 
-### Установка зависимостей ROS
+### Установка зависимостей
 
-Для работы пакета необходимо установка `python` зависимостей
+Для работы пакета необходима установка `python` зависимостей. Начиная с версии [образа ОС 0.22](https://manual.turtlebro.ru/administrirovanie-ros/raspberrypi#skachat-obraz) эти зависимости установлены по умолчанию, но если вы работаете с "чистого" образа, то для установки зависимостей воспользуйтесь командами: 
 
 ```
 cd ~/catkin_ws/src
 pip3 install -r turtlebro_extra/turtlebro_delivery/requirements.txt
 ```
 
-### Подключение полезной нагрузки
+## Подключение полезной нагрузки
 
 Для управления полезной нагрузкой робота-курьера, необходимо загрузить на робота Ардуино скетч, который находится в папке: `arduino/delivery/delivery.ino`
 
-Сервопривод подулючить в разъем `D46`
+Сервопривод подключить в разъем `D46`
 
-Концевой выключатель в `A12`
+Концевой выключатель в разъем `A12`
 
 Кнопка управления крышкой в `A15`
 
-### Алгоритм работы робота-курьера
+## Алгоритм работы робота-курьера
 
 Пакет доставки работает по следующему алгоритму:
 
@@ -75,9 +75,9 @@ pose = {x = 0,y = 0, theta = 0 }
 3. secret = [aruco_id] - задается aruco_id "клиента", по которому будет выдан заказ. Может совпадать с aruco_id товара.
 ```
 
-### Запуск доставки
+## Запуск доставки
 
-Запуск функционирования в режиме курьера: 
+__Запуск функционирования в режиме курьера__ 
 
 ```
 roslaunch turtlebro_delivery delivery.launch
@@ -93,11 +93,15 @@ roslaunch turtlebro_delivery delivery.launch fake_move_base:=true
 
 Для подключения колонки к роботу, необходимо убедиться что правильно установлен пакет `turtlebro_speech` (https://github.com/voltbro/turtlebro_extra/tree/master/turtlebro_speech) из метапакета `turtlebro_extra`
 
-Запуск доставки с озвучкой статусов:
+__Запуск доставки с озвучкой статусов__
 
 ```
 roslaunch turtlebro_delivery delivery_speech.launch
-или 
+```
+
+__Запуск доставки с озвучкой статусов в режиме эмуляции перемещения__
+
+```
 roslaunch turtlebro_delivery delivery_speech.launch fake_move_base:=true
 ```
 
