@@ -167,7 +167,6 @@ include_directories(
 
 install(PROGRAMS
    src/patrol.py
-   src/fake_move_base.py
    DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
