@@ -1,0 +1,9 @@
+<launch>
+  <!-- Arguments -->
+  <arg name="waypoints_data_file" default="$(find turtlebro_patrol)/data/goals.xml"/>
+
+  <!--Patrol Node -->
+  <node pkg="turtlebro_patrol" type="patrol.py" name="turtlebro_patrol" output="screen" required="true">
+    <param name="waypoints_data_file" value="$(arg waypoints_data_file)"/>
+  </node>
+</launch>

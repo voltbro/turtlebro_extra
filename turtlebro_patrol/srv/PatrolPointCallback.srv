@@ -1,0 +1,4 @@
+turtlebro_patrol/PatrolPoint patrol_point
+---
+int8 result
+string result_msg
