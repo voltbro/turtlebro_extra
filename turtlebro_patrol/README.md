@@ -77,11 +77,7 @@ rostopic pub /patrol_control std_msgs/String "data: 'start'"
 
 Нода патрулирования выполнит запрос на обслуживание с ```PatrolPointCallback``` тип сообщения о достижении точки.
 
-
-
-### Запуск из терминала с callback_service
-
-__Запуск с callback_service__ 
+__Запуск из терминала с callback_servicee__ 
 ```
 python3 patrol.py _point_callback_service:=my_service_name
 ```
