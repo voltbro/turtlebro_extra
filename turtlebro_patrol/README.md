@@ -20,19 +20,19 @@ catkin_make --pkg turtlebro_patrol
 rosservice call /reset
 ```
 
-### Запуск нод патрулирования и навигации
+__Запуск нод патрулирования и навигации__
 
 ```
 roslaunch turtlebro_patrol patrol.launch
 ```
 
-### Запуск ноды патрулирования
+__Запуск ноды патрулирования__
 
 ```
 roslaunch turtlebro_patrol patrol_run.launch
 ```
 
-### Настройка патрулирования
+## Настройка патрулирования
 
 Координаты точек патрулирования задаются в файле:
 
@@ -81,7 +81,7 @@ rostopic pub /patrol_control std_msgs/String "data: 'start'"
 
 ### Запуск из терминала с callback_service
 
-Запуск с callback_service 
+__Запуск с callback_service__ 
 ```
 python3 patrol.py _point_callback_service:=my_service_name
 ```
