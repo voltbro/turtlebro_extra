@@ -1,23 +1,9 @@
-# Turtlebro_patrol ROS package for Turtlebro patrolbot
-
-### Dependencies
-Dependences
-To perform patrolling tasks, you should have navigation packages installed on the robot:
-
-* turtlebro
-* turtlebro_navigation
-* amcl
-* dwa_local_planner
-* global_planner
-* gmapping
-* map_server
-* move_base
-* move_base_msgs
-* actionlib
+# Пакет патрулирования turtlebro_patrol для робота TurtleBro
 
 
-### Package installation
-Install the package on RaspberryPi in the "standard" way:
+## Установка пакета
+
+Пакет входит в сборку метапакета `turtlebro_extra` и устанавливается автоматически при установке этого пакета. В случае, если вы хотите установить пакет патрулирования отдельно, следуйте следующим инструкциям:
 
 ```
 cd ~/catkin_ws/src
@@ -26,37 +12,44 @@ cd ..
 catkin_make --pkg turtlebro_patrol
 ```
 
-### Launch
+## Запуск пакета патрулирования
 
-Before launch you have to clear data from stm32 by sending reset command:
+Перед запуском вы должны очистить данные одометрии из STM32, отправив команду сброса:
 ```
 rosservice call /reset
 ```
-
+### Запуск нод патрулирования и навигации
 
 ```
-#  Navigation node and patrol node launch
 roslaunch turtlebro_patrol patrol.launch
+```
 
-#  Patrol node launch only
+### Запуск ноды патрулирования
+
+```
 roslaunch turtlebro_patrol patrol_run.launch
 ```
 
-### Configuring patrolling
-The coordinates of the points where the robot starts patrolling are located in the file:
+### Настройка патрулирования
+
+Координаты точек патрулирования задаются в файле:
 
 ```
-~/catkin_ws/src/turtlebro_patrol/data/goals.xml
+~/catkin_ws/src/turtlebro_extra/turtlebro_patrol/data/goals.xml
 ```
 
-_Important note!_ 
+_Важное примечание!_ 
 
-when you adding to goals.xml point like
+когда вы добавляете в goals.xml точки, вида:
 ```
 <goal x='1' y='0' theta='90' name="point_name"/>
 ```
-remember that x axis is forward for robot, and y-axis is left for robot. 
-"Theta" should be set in degrees with right-hand-rule rotation
+помните, что **ось x** направлена вперед для робота, а **ось y** - влево для робота. 
+"Theta" должна быть установлена в градусах и направлена по правилу правой руки:
+
+![screenshot of sample] (https://2.downloader.disk.yandex.ru/preview/c15743b31986a9b90d220a320e1071f9f6d04360e87ee3565abc5e774973aac4/inf/Jde04pTzavkgJ1XLLYpcugzdEN7C0f6ftKDJ61k_XuNAfPPYu_GusphWqHiBvBqZaJoPpx74D6azr-msnTGrTg%3D%3D?uid=51578132&filename=%D0%9D%D0%B0%D0%BF%D1%80%D0%B0%D0%B2%D0%BB%D0%B5%D0%BD%D0%B8%D0%B5%20%D0%BE%D1%81%D0%B5%D0%B9.jpg&disposition=inline&hash=&limit=0&content_type=image%2Fjpeg&owner_uid=51578132&tknv=v2&size=1920x872)
+
+![Иллюстрация к проекту](https://github.com/jon/coolproject/raw/master/image/image.png)
 
 ### Patrol control
 The control of the patrol bot is performed by sending messages of the std_msgs/String type to the topic /patrol_control
