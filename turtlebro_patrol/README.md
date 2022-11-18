@@ -58,10 +58,10 @@ pose = {x = 0, y = 0, theta = 0}
 
 ## Управление патрулированием
 
-Управление роботом при патрулировании осуществляется путем отправки сообщений типа: ** std_msgs/String ** в топик **/patrol_control**. Пример:
+Управление роботом при патрулировании осуществляется путем отправки сообщения типа: ** std_msgs/String ** в сервис **/patrol_control**. Пример:
 
 ```
-rostopic pub /patrol_control std_msgs/String "data: 'start'" 
+rosservice call /patrol_control "command: 'start'" 
 ```
 
 Допустимые команды:
@@ -78,7 +78,7 @@ rostopic pub /patrol_control std_msgs/String "data: 'start'"
 
 Нода патрулирования выполнит запрос на обслуживание с ```PatrolPointCallback``` тип сообщения о достижении точки.
 
-__Запуск из терминала с callback_servicee__ 
+__Запуск из терминала с callback_service__ 
 ```
 python3 patrol.py _point_callback_service:=my_service_name
 ```

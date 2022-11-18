@@ -15,6 +15,7 @@ from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 from std_msgs.msg import String
 from turtlebro_patrol.msg import PatrolPoint
 from turtlebro_patrol.srv import PatrolPointCallback, PatrolPointCallbackRequest
+from turtlebro_patrol.srv import PatrolControlCallback, PatrolControlCallbackRequest
 
 #Import standard Pose msg types and TF transformation to deal with quaternions
 from tf.transformations import quaternion_from_euler
@@ -29,8 +30,6 @@ class Patrol(object):
 
         rospy.on_shutdown(self.on_shutdown)
 
-        rospy.Subscriber('patrol_control', String, self.patrol_control_cb)
-
         self.cmd_pub = rospy.Publisher('/cmd_vel', Twist, queue_size=5)
         self.reached_point_pub = rospy.Publisher('/patrol_control/reached', PatrolPoint, queue_size=5)
 
@@ -41,6 +40,7 @@ class Patrol(object):
         self.on_patrol = True
         self.current_point = 0
         self.goal = None
+        self.cmd_shutdown = False
 
         self.home_point = [0, 0, 0, 'home']  # position x y theta of home
         self.patrol_points = []
@@ -51,6 +51,8 @@ class Patrol(object):
         service_name = rospy.get_param('~point_callback_service', False)
 
         self.init_callback_service(service_name)
+
+        self.control_service = rospy.Service('patrol_control', PatrolControlCallback, self.service_control_function)
 
         rospy.loginfo("Init done")
 
@@ -67,6 +69,36 @@ class Patrol(object):
             self.call_back_service = False
             rospy.loginfo("No point callback service")
  
+    def service_control_function(self, message):
+          
+        if message.command in ["start", "pause", "resume", "home", "shutdown"]:
+
+            rospy.loginfo("Patrol: {} sequence received".format(message.command))
+
+            self.client.cancel_all_goals()  
+
+            if message.command == "shutdown":
+                result = "Ok, goodbye"
+                rospy.sleep(0.1)
+                self.cmd_shutdown = True
+                self.on_patrol = True   
+                
+            if message.command in ["start", "resume"]:    
+                result = "Ok, let`s do it"
+                self.on_patrol = True  
+
+            if message.command in ["home", "pause"]:    
+                self.on_patrol = False
+                result = "Ok, let`s do it"
+
+            # start / resume movement opp 
+            if message.command in ["resume", "home", "start"]:
+                patrol_point = self.get_patrol_point(message.command)
+                self.goal = self.goal_message_assemble(patrol_point)    
+        else:
+            rospy.loginfo("Patrol: Command unrecognized")
+        
+        return(result)
 
     def move(self):
 
@@ -74,36 +106,14 @@ class Patrol(object):
 
         # in that loop we will check if there is shutdown flag or rospy core have been crushed
         while not rospy.is_shutdown():
-            if self.goal is not None:
-                self.client.send_goal(self.goal, done_cb=self.move_base_cb)
-                self.goal = None
+            if self.cmd_shutdown:
+                rospy.signal_shutdown("Have shutdown command in patrol_control service")
+            else:
+                if self.goal is not None:
+                    self.client.send_goal(self.goal, done_cb=self.move_base_cb)
+                    self.goal = None
 
             rospy.sleep(0.1)
-
-    def patrol_control_cb(self, message):
-
-        if message.data in ["start", "pause", "resume", "home", "shutdown"]:
-
-            rospy.loginfo("Patrol: {} sequence received".format(message.data))
-
-            self.client.cancel_all_goals()  
-
-            if message.data == "shutdown":
-                rospy.signal_shutdown("Have shutdown command in patrol_control topic")
-
-            if message.data in ["start", "resume", "shutdown"]:    
-                self.on_patrol = True
-                
-            if message.data in ["home", "pause"]:    
-                self.on_patrol = False
-
-            # start / resume movement opp 
-            if message.data in ["resume", "home", "start"]:
-                patrol_point = self.get_patrol_point(message.data)
-                self.goal = self.goal_message_assemble(patrol_point)
-                     
-        else:
-            rospy.loginfo("Patrol: Command unrecognized")
 
 
     def get_patrol_point(self, command):
@@ -127,8 +137,6 @@ class Patrol(object):
 
         point = self.patrol_points[self.current_point]
 
-        #rospy.loginfo(point)
-
         if status == GoalStatus.PREEMPTED:
             rospy.loginfo("Patrol: Goal cancelled {}".format(point[3]))
 
@@ -144,13 +152,13 @@ class Patrol(object):
             self.reached_point_pub.publish(patrol_point)        
 
             if self.call_back_service:
-                rospy.loginfo("Call patroll Service")
+                rospy.loginfo("Call patrol Service")
                 request = PatrolPointCallbackRequest()
                 request.patrol_point = patrol_point
                 self.call_back_service.call(request)
-                rospy.loginfo("Call patroll Service: finish")
+                rospy.loginfo("Call patrol Service: finish")
 
-            # renew patrol point if on patroll mode
+            # renew patrol point if on patrol mode
             if self.on_patrol:
                 next_patrol_point = self.get_patrol_point('next')
                 rospy.sleep(0.5)  # small pause in point
@@ -214,7 +222,7 @@ class Patrol(object):
 # If the python node is executed as main process (sourced directly)
 if __name__ == '__main__':
     try:
-        rospy.init_node('turtlebro_patroll')
+        rospy.init_node('turtlebro_patrol')
         patrol = Patrol()
         patrol.move()
 
