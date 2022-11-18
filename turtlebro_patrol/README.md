@@ -37,19 +37,20 @@ roslaunch turtlebro_patrol patrol_run.launch
 Координаты точек патрулирования задаются в файле:
 
 ```
-~/catkin_ws/src/turtlebro_extra/turtlebro_patrol/data/goals.xml
+~/catkin_ws/src/turtlebro_extra/turtlebro_patrol/data/goals.toml
 ```
 
 _Важное примечание!_ 
 
-когда вы добавляете в goals.xml точки, вида:
+когда вы добавляете в goals.toml точки, вида:
 
 ```
-<goal x='1' y='0' theta='90' name="point_name"/>
+[Goal#]
+pose = {x = 0, y = 0, theta = 0}
 ```
 
 помните, что **ось x** направлена вперед для робота, а **ось y** - влево для робота. 
-**"Theta"** должна быть установлена в градусах и направлена по правилу правой руки:
+**"theta"** должна быть установлена в градусах и направлена по правилу правой руки:
 
 
 ![Направление осей](https://user-images.githubusercontent.com/57194638/201637592-358a0765-1cf6-474c-a713-78d55bb93c07.jpg)

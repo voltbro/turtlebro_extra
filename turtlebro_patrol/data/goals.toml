@@ -1,0 +1,6 @@
+[Goal1]
+pose = {x = 0.5, y = 0, theta = 45}
+
+[Goal2]
+pose = {x = 0, y = -0,5, theta = -45}
+
