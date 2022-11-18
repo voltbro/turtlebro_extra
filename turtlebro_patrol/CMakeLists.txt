@@ -59,6 +59,7 @@ add_message_files(
  add_service_files(
    FILES
    PatrolPointCallback.srv
+   PatrolControlCallback.srv
 )
 
 ## Generate actions in the 'action' folder
