@@ -80,8 +80,7 @@ class DeliveryRobot():
                     self.set_state('move_to_delivery_point')
 
                     goal = self._goal_message_assemble(self.client['pose'])
-                    self.move_base_client.send_goal(
-                        goal, done_cb=self.move_client_cb)
+                    self.move_base_client.send_goal(goal, done_cb=self.move_client_cb)
 
             # точка клиента, ждем аруко код
             if self.state in ['on_delivery_point', 'client_pickup_error']:

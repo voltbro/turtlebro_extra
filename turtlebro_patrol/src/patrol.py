@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import rospy
 import math
+import toml
 
 #import Twist data type for direct control
 from geometry_msgs.msg import Twist
@@ -20,8 +21,7 @@ from tf.transformations import quaternion_from_euler
 
 from pathlib import Path
 
-# XML parser
-import xml.etree.ElementTree as ET
+
 
 class Patrol(object):
 
@@ -46,7 +46,7 @@ class Patrol(object):
         self.patrol_points = []
 
         self.waypoints_data_file = rospy.get_param('~waypoints_data_file', str(
-            Path(__file__).parent.absolute()) + '/../data/goals.xml')
+            Path(__file__).parent.absolute()) + '/../data/goals.toml')
 
         service_name = rospy.get_param('~point_callback_service', False)
 
@@ -70,7 +70,7 @@ class Patrol(object):
 
     def move(self):
 
-        self.patrol_points = self.fetch_points(self.waypoints_data_file)
+        self.patrol_points = self.load_goals_config()
 
         # in that loop we will check if there is shutdown flag or rospy core have been crushed
         while not rospy.is_shutdown():
@@ -127,6 +127,8 @@ class Patrol(object):
 
         point = self.patrol_points[self.current_point]
 
+        #rospy.loginfo(point)
+
         if status == GoalStatus.PREEMPTED:
             rospy.loginfo("Patrol: Goal cancelled {}".format(point[3]))
 
@@ -154,30 +156,34 @@ class Patrol(object):
                 rospy.sleep(0.5)  # small pause in point
                 self.goal = self.goal_message_assemble(next_patrol_point)  
 
-    def fetch_points(self, xml_file):
+    def load_goals_config(self):
 
-        rospy.loginfo("Patrol: XML Parsing started")
+        rospy.loginfo("Patrol: TOML Parsing started")
 
         try:
-            # Define xml-goals file path
-            tree = ET.parse(xml_file)  # get file from launch params
-            root = tree.getroot()
+        
+            config_file = self.waypoints_data_file
 
+            rospy.loginfo(f"Loading config file {config_file}")
+
+            self.goals_config = toml.load(config_file)
             points = []
-            points.append(self.home_point)
+            points.append(self.home_point) 
 
-            # filling points
-            for xml_element in root.findall('goal'):
-                points.append([xml_element.get('x'), xml_element.get('y'), xml_element.get('theta'), xml_element.get('name')])
+            for i in range(len(self.goals_config)): 
+                    i = i + 1
+                    points.append([self.goals_config["Goal{}".format(i)]["pose"]['x'], self.goals_config["Goal{}".format(i)]["pose"]['y'],
+                    self.goals_config["Goal{}".format(i)]["pose"]['theta'], "{}".format(i)])
 
-            rospy.loginfo("Patrol:  XML parcing done. goals detected:  {}".format(points))
+            rospy.loginfo("Patrol:  TOML parcing done. goals detected:  {}".format(points))
 
-            return points  
+            return points
 
         except Exception as e:
 
-            rospy.loginfo("XML parser failed")
-            rospy.signal_shutdown("No valid XML file")
+            rospy.loginfo("TOML parser failed")
+            rospy.signal_shutdown("No valid TOML file")
+
 
     def goal_message_assemble(self, point):
         # Creates a new goal with the MoveBaseGoal constructor
