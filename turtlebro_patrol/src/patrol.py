@@ -107,7 +107,7 @@ class Patrol(object):
         # in that loop we will check if there is shutdown flag or rospy core have been crushed
         while not rospy.is_shutdown():
             if self.cmd_shutdown:
-                rospy.signal_shutdown("Have shutdown command in patrol_control topic")
+                rospy.signal_shutdown("Have shutdown command in patrol_control service")
             else:
                 if self.goal is not None:
                     self.client.send_goal(self.goal, done_cb=self.move_base_cb)
