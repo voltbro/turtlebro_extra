@@ -38,14 +38,10 @@ class Patrol(object):
         self.client.wait_for_server()
 
         self.patrol_state = "patrol"
-        self.current_point = 0
+#        self.current_point = 0
         self.goal = None
-
-        self.home_point = [0, 0, 0, 'home']  # position x y theta of home
-        self.patrol_points = []
-
-        self.waypoints_data_file = rospy.get_param('~waypoints_data_file', str(
-            Path(__file__).parent.absolute()) + '/../data/goals.toml')
+        self.point_id = 1
+ 
 
         service_name = rospy.get_param('~point_callback_service', False)
 
@@ -99,8 +95,8 @@ class Patrol(object):
         return(result)
 
     def move(self):
-
-        self.patrol_points = self.load_goals_config()
+        
+        self.load_config_file()
 
         # in that loop we will check if there is shutdown flag or rospy core have been crushed
         while not rospy.is_shutdown():
@@ -118,34 +114,39 @@ class Patrol(object):
         # point_type: [start current next home]
 
         if command == 'home':
-            self.current_point = 0
+            point_name = f"home"
 
         if command == 'start':
-            self.current_point = 1  
+            point_name = f"goal1" 
 
-        if command == 'next':
-            # cycle patrol points
-            self.current_point += 1
-            if self.current_point >= len(self.patrol_points):
-               self.current_point = 1 
-            
-        return self.patrol_points[self.current_point]
+        if command == 'next':  # cycle patrol points 
+
+            self.point_id += 1
+
+            if self.point_id >= len(self.config_file):
+               self.point_id = 1 
+
+            point_name=f"goal{self.point_id}"
+
+        self.current_point = self.config_file[point_name]["pose"]
+
+        return self.current_point
 
     def move_base_cb(self, status, result):
 
-        point = self.patrol_points[self.current_point]
+        point = self.current_point
 
         if status == GoalStatus.PREEMPTED:
-            rospy.loginfo("Patrol: Goal cancelled {}".format(point[3]))
+            rospy.loginfo("Patrol: Goal cancelled {}".format(self.point_id))
 
         if status == GoalStatus.SUCCEEDED:
-            rospy.loginfo("Patrol: Goal reached {}".format(point[3]))
+            rospy.loginfo("Patrol: Goal reached {}".format(self.point_id))
 
             patrol_point = PatrolPoint(
-                x = float(point[0]),
-                y = float(point[1]),
-                theta = int(point[2]),
-                name = point[3])
+                x = float(point["x"]),
+                y = float(point['y']),
+                theta = int(point["theta"]),
+                name = f"{self.point_id}")
 
             self.reached_point_pub.publish(patrol_point)        
 
@@ -160,19 +161,22 @@ class Patrol(object):
             if self.patrol_state == "patrol":
                 next_patrol_point = self.get_patrol_point('next')
                 rospy.sleep(0.5)  # small pause in point
-                self.goal = self.goal_message_assemble(next_patrol_point)  
+                self.goal = self.goal_message_assemble(self.config_file[next_patrol_point])  
 
-    def load_goals_config(self):
+    def load_config_file(self):
 
         rospy.loginfo("Patrol: TOML Parsing started")
 
         try:
         
-            config_file = self.waypoints_data_file
+            config_data_file = rospy.get_param('~config_data_file', str(
+            Path(__file__).parent.absolute()) + '/../data/goals.toml')
 
-            rospy.loginfo(f"Loading config file {config_file}")
+            rospy.loginfo(f"Loading config file {config_data_file}")
 
-            self.goals_config = toml.load(config_file)
+            self.config_file = toml.load(config_data_file)
+            
+            '''
             points = []
             points.append(self.home_point) 
 
@@ -184,7 +188,9 @@ class Patrol(object):
             rospy.loginfo("Patrol:  TOML parcing done. goals detected:  {}".format(points))
 
             return points
-
+            '''
+            return self.config_file
+            
         except Exception as e:
 
             rospy.loginfo("TOML parser failed")
@@ -197,10 +203,10 @@ class Patrol(object):
         # Move to x, y meters of the "map" coordinate frame 
         goal.target_pose.header.frame_id = "map"
         goal.target_pose.header.stamp = rospy.Time.now()
-        goal.target_pose.pose.position.x = float(point[0])
-        goal.target_pose.pose.position.y = float(point[1])
+        goal.target_pose.pose.position.x = float(point["x"])
+        goal.target_pose.pose.position.y = float(point["y"])
 
-        q = quaternion_from_euler(0, 0, math.radians(float(point[2]))) # using TF.transformation func to get quaternion from theta Euler angle
+        q = quaternion_from_euler(0, 0, math.radians(float(point["theta"]))) # using TF.transformation func to get quaternion from theta Euler angle
         goal.target_pose.pose.orientation.x = q[0]
         goal.target_pose.pose.orientation.y = q[1]
         goal.target_pose.pose.orientation.z = q[2]
