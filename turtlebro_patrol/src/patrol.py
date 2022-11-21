@@ -37,10 +37,9 @@ class Patrol(object):
         rospy.loginfo("Waiting move_base action")
         self.client.wait_for_server()
 
-        self.on_patrol = True
+        self.patrol_state = "patrol"
         self.current_point = 0
         self.goal = None
-        self.cmd_shutdown = False
 
         self.home_point = [0, 0, 0, 'home']  # position x y theta of home
         self.patrol_points = []
@@ -80,15 +79,14 @@ class Patrol(object):
             if message.command == "shutdown":
                 result = "Ok, goodbye"
                 rospy.sleep(0.1)
-                self.cmd_shutdown = True
-                self.on_patrol = True   
+                self.patrol_state = "shutdown"  
                 
             if message.command in ["start", "resume"]:    
                 result = "Ok, let`s do it"
-                self.on_patrol = True  
+                self.patrol_state = "patrol"
 
             if message.command in ["home", "pause"]:    
-                self.on_patrol = False
+                self.patrol_state = "wait"
                 result = "Ok, let`s do it"
 
             # start / resume movement opp 
@@ -106,7 +104,7 @@ class Patrol(object):
 
         # in that loop we will check if there is shutdown flag or rospy core have been crushed
         while not rospy.is_shutdown():
-            if self.cmd_shutdown:
+            if self.patrol_state == "shutdown":
                 rospy.signal_shutdown("Have shutdown command in patrol_control service")
             else:
                 if self.goal is not None:
@@ -159,7 +157,7 @@ class Patrol(object):
                 rospy.loginfo("Call patrol Service: finish")
 
             # renew patrol point if on patrol mode
-            if self.on_patrol:
+            if self.patrol_state == "patrol":
                 next_patrol_point = self.get_patrol_point('next')
                 rospy.sleep(0.5)  # small pause in point
                 self.goal = self.goal_message_assemble(next_patrol_point)  
