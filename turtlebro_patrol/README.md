@@ -45,7 +45,8 @@ _Важное примечание!_
 когда вы добавляете в goals.toml точки, вида:
 
 ```
-[Goal#]
+[[patrolling]]
+name = "PointName"
 pose = {x = 0, y = 0, theta = 0}
 ```
 
@@ -54,6 +55,18 @@ pose = {x = 0, y = 0, theta = 0}
 
 
 ![Направление осей](https://user-images.githubusercontent.com/57194638/201637592-358a0765-1cf6-474c-a713-78d55bb93c07.jpg)
+
+В качестве имя точки **name = "PointName"** вы можете указывать реальный объект/место, к которому ведется патрулирование. Пример:
+
+```
+[[patrolling]]
+name = "Room1"
+pose = {x = 0.5, y = 0, theta = 90}
+
+[[patrolling]]
+name = "Da Vinci Painting"
+pose = {x = 0, y = -1.3, theta = -45}
+```
 
 
 ## Управление патрулированием
