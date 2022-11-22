@@ -37,6 +37,7 @@ class Patrol(object):
         self.load_config_file()   
         self.current_point = self.config['home'] 
 
+
         self.cmd_pub = rospy.Publisher('/cmd_vel', Twist, queue_size=5)
         self.reached_point_pub = rospy.Publisher('/patrol_control/reached', PatrolPoint, queue_size=5)
         rospy.Service('patrol_control', PatrolControlCallback, self.control_service)
@@ -169,6 +170,7 @@ class Patrol(object):
 
             self.config = toml.load(config_data_file)  
             self.config['home']['name'] = 'home'
+            rospy.loginfo(f"Patrol Points: {self.config }")
 
             # TODO check home point exist, check patrolling data exist
 
