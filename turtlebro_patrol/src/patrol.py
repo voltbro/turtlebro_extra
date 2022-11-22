@@ -3,6 +3,8 @@ import rospy
 import math
 import toml
 
+from itertools import cycle
+
 #import Twist data type for direct control
 from geometry_msgs.msg import Twist
 
@@ -30,24 +32,21 @@ class Patrol(object):
 
         rospy.on_shutdown(self.on_shutdown)
 
+        self.goal = None 
+        self.patrol_state = "patrol"
+        self.load_config_file()   
+        self.current_point = self.config['home'] 
+
         self.cmd_pub = rospy.Publisher('/cmd_vel', Twist, queue_size=5)
         self.reached_point_pub = rospy.Publisher('/patrol_control/reached', PatrolPoint, queue_size=5)
+        rospy.Service('patrol_control', PatrolControlCallback, self.control_service)
 
         self.client = actionlib.SimpleActionClient('move_base', MoveBaseAction)
         rospy.loginfo("Waiting move_base action")
         self.client.wait_for_server()
 
-        self.patrol_state = "patrol"
-#        self.current_point = 0
-        self.goal = None
-        self.point_id = 1
- 
-
         service_name = rospy.get_param('~point_callback_service', False)
-
         self.init_callback_service(service_name)
-
-        self.control_service = rospy.Service('patrol_control', PatrolControlCallback, self.service_control_function)
 
         rospy.loginfo("Init done")
 
@@ -64,7 +63,7 @@ class Patrol(object):
             self.call_back_service = False
             rospy.loginfo("No point callback service")
  
-    def service_control_function(self, message):
+    def control_service(self, message):
           
         if message.command in ["start", "pause", "resume", "home", "shutdown"]:
 
@@ -74,7 +73,6 @@ class Patrol(object):
 
             if message.command == "shutdown":
                 result = "Ok, goodbye"
-                rospy.sleep(0.1)
                 self.patrol_state = "shutdown"  
                 
             if message.command in ["start", "resume"]:    
@@ -96,11 +94,10 @@ class Patrol(object):
 
     def move(self):
         
-        self.load_config_file()
-
         # in that loop we will check if there is shutdown flag or rospy core have been crushed
         while not rospy.is_shutdown():
             if self.patrol_state == "shutdown":
+                rospy.sleep(0.1)
                 rospy.signal_shutdown("Have shutdown command in patrol_control service")
             else:
                 if self.goal is not None:
@@ -111,42 +108,38 @@ class Patrol(object):
 
 
     def get_patrol_point(self, command):
-        # point_type: [start current next home]
+        # command: [start resume next home]
+
+        if command in ['resume', 'current']:
+            pass
 
         if command == 'home':
-            point_name = f"home"
+            self.current_point = self.config['home']
 
         if command == 'start':
-            point_name = f"goal1" 
+            self.patrolling = cycle(self.config['patrolling'])
+            self.current_point = next(self.patrolling)
 
         if command == 'next':  # cycle patrol points 
-
-            self.point_id += 1
-
-            if self.point_id >= len(self.config_file):
-               self.point_id = 1 
-
-            point_name=f"goal{self.point_id}"
-
-        self.current_point = self.config_file[point_name]["pose"]
-
+            self.current_point = next(self.patrolling)
+            
         return self.current_point
 
     def move_base_cb(self, status, result):
 
-        point = self.current_point
+        point = self.get_patrol_point('current')
 
         if status == GoalStatus.PREEMPTED:
-            rospy.loginfo("Patrol: Goal cancelled {}".format(self.point_id))
+            rospy.loginfo("Patrol: Goal cancelled {}".format(point['name']))
 
         if status == GoalStatus.SUCCEEDED:
-            rospy.loginfo("Patrol: Goal reached {}".format(self.point_id))
+            rospy.loginfo("Patrol: Goal reached {}".format(point['name']))
 
             patrol_point = PatrolPoint(
-                x = float(point["x"]),
-                y = float(point['y']),
-                theta = int(point["theta"]),
-                name = f"{self.point_id}")
+                x = float(point['pose']['x']),
+                y = float(point['pose']['y']),
+                theta = int(point['pose']['theta']),
+                name = point['name'])
 
             self.reached_point_pub.publish(patrol_point)        
 
@@ -159,9 +152,9 @@ class Patrol(object):
 
             # renew patrol point if on patrol mode
             if self.patrol_state == "patrol":
-                next_patrol_point = self.get_patrol_point('next')
+                next_point = self.get_patrol_point('next')
                 rospy.sleep(0.5)  # small pause in point
-                self.goal = self.goal_message_assemble(self.config_file[next_patrol_point])  
+                self.goal = self.goal_message_assemble(next_point)  
 
     def load_config_file(self):
 
@@ -174,23 +167,11 @@ class Patrol(object):
 
             rospy.loginfo(f"Loading config file {config_data_file}")
 
-            self.config_file = toml.load(config_data_file)
-            
-            '''
-            points = []
-            points.append(self.home_point) 
+            self.config = toml.load(config_data_file)  
+            self.config['home']['name'] = 'home'
 
-            for i in range(len(self.goals_config)): 
-                    i = i + 1
-                    points.append([self.goals_config["Goal{}".format(i)]["pose"]['x'], self.goals_config["Goal{}".format(i)]["pose"]['y'],
-                    self.goals_config["Goal{}".format(i)]["pose"]['theta'], "{}".format(i)])
+            # TODO check home point exist, check patrolling data exist
 
-            rospy.loginfo("Patrol:  TOML parcing done. goals detected:  {}".format(points))
-
-            return points
-            '''
-            return self.config_file
-            
         except Exception as e:
 
             rospy.loginfo("TOML parser failed")
@@ -203,16 +184,16 @@ class Patrol(object):
         # Move to x, y meters of the "map" coordinate frame 
         goal.target_pose.header.frame_id = "map"
         goal.target_pose.header.stamp = rospy.Time.now()
-        goal.target_pose.pose.position.x = float(point["x"])
-        goal.target_pose.pose.position.y = float(point["y"])
+        goal.target_pose.pose.position.x = float(point['pose']['x'])
+        goal.target_pose.pose.position.y = float(point['pose']['y'])
 
-        q = quaternion_from_euler(0, 0, math.radians(float(point["theta"]))) # using TF.transformation func to get quaternion from theta Euler angle
+        q = quaternion_from_euler(0, 0, math.radians(float(point['pose']['theta']))) # using TF.transformation func to get quaternion from theta Euler angle
         goal.target_pose.pose.orientation.x = q[0]
         goal.target_pose.pose.orientation.y = q[1]
         goal.target_pose.pose.orientation.z = q[2]
         goal.target_pose.pose.orientation.w = q[3]
 
-        rospy.loginfo("Patrol: created goal from point {} ".format(point))
+        rospy.loginfo("Patrol: created goal from point {} ".format(point['name']))
 
         return goal
         
