@@ -1,3 +1,12 @@
+#Установка пакета
+Пакет входит в сборку метапакета turtlebro_extra и устанавливается автоматически при установке этого пакета. В случае, если вы хотите установить пакет turtlebro_speech отдельно, на роботе выполните команды:
+
+```
+cd ~/catkin_ws/src
+git clone https://github.com/voltbro/turtlebro_extra
+cd ../
+catkin_make --pkg turtlebro_speech
+```
 # turtlebro_actions
 
 ```
