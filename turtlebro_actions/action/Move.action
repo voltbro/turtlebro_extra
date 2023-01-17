@@ -1,0 +1,9 @@
+# Define the goal
+float32 goal  # Distance in meters
+float32 speed # linial speed in m/s
+---
+# Define the result
+float32 result
+---
+# Define a feedback message
+float32 feedback #Rotation passed

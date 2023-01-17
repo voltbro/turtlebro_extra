@@ -1,0 +1,19 @@
+<launch>
+
+  <arg name="radio_device" default="/dev/serial/by-id/usb-Silicon_Labs_CP2102_USB_to_UART_Bridge_Controller_0001-if00-port0"/>
+  <arg name="radio_baud" default="19200"/>
+  <arg name="linear_speed" default="0.22"/>
+  <arg name="angular_speed" default="1"/> 
+
+
+  <include file="$(find turtlebro_actions)/launch/action_servers.launch"/>
+
+  <node name="radio_command_node" pkg="turtlebro_actions" type="radio.py" output="screen" respawn="true">
+      <param name="port" value="$(arg radio_device)"/>
+      <param name="baud" value="$(arg radio_baud)"/>
+
+      <param name="linear_speed" value="$(arg linear_speed)"/>
+      <param name="angular_speed" value="$(arg angular_speed)"/>
+  </node>
+
+</launch>

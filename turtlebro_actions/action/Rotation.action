@@ -1,0 +1,9 @@
+# Define the goal
+int32 goal  # Rotation degrees
+float32 speed # angular speed in rads/s
+---
+# Define the result
+int32 result
+---
+# Define a feedback message
+int32 feedback #Rotation passed

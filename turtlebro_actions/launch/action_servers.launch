@@ -1,0 +1,4 @@
+<launch>
+  <node name="move_server" pkg="turtlebro_actions" type="move_server.py" output="log" respawn="true" />
+  <node name="rotate_server" pkg="turtlebro_actions" type="rotate_server.py" output="log" respawn="true" />
+</launch>
