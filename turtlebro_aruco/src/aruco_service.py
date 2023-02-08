@@ -39,7 +39,8 @@ class ArucoDetectService():
                     data.append((markerID, size)) 
                 
             if len(data) >0:
-                data = sorted(data, key=lambda x: x[1], reverse=True)
+                data = sorted(data, key=lambda x: x[1], reverse=True)              
+                rospy.loginfo(f"ArucoService: Have marker result:  {data[0][0]}")
                 return ArucoDetectResponse(id = data[0][0], size = int(data[0][1]))
   
         return ArucoDetectResponse(0,0)  
