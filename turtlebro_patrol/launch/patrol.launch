@@ -1,10 +1,11 @@
 <launch>
+  <arg name="fake_move_base" default="false"/>
 
-  <!--Navigation -->
-  <include file="$(find turtlebro_navigation)/launch/turtlebro_slam_navigation.launch">
-    <arg name="open_rviz" value="False" />
+  <!-- Run Navigation for Patroll -->
+  <include file="$(find turtlebro_patrol)/launch/navigation_slam.launch">
+      <arg name="fake_move_base" value="$(arg fake_move_base)"/>
   </include>
-
+   
   <!-- Run patrole node -->
   <include file="$(find turtlebro_patrol)/launch/patrol_run.launch"/>
 

@@ -1,0 +1,17 @@
+<launch>
+  <!-- Arguments -->
+  <arg name="fake_move_base" default="false"/>
+  
+  <!-- Run fake move base -->
+  <group if="$(arg fake_move_base)">
+    <node pkg="turtlebro_navigation" type="fake_move_base.py" name="fake_move_base" output="screen" required="true"/>
+  </group>
+
+  <!-- Or run Navigation -->
+  <group unless="$(arg fake_move_base)">  
+    <include file="$(find turtlebro_navigation)/launch/turtlebro_slam_navigation.launch">
+        <arg name="open_rviz" value="False"/>
+    </include>
+  </group>
+  
+</launch>  
