@@ -1,34 +1,25 @@
-## Инструкция пакета turtlebro_excursion
+# Пакет turtlebro_excursion
 
-### Установка пакета ROS
+Демонстрационный пакет для робота экскурсовода.
 
-Перед установкой пакета необходимо установить системный пакет `festvox-ru`
+Возможна работа в двух режимах, в первом робот озвучивает текст привязанный к точкам патрулирования. Во втором, происходит дополнительное чтение Arcuco маркеров.
 
-```
-sudo apt install festvox-ru
-```
+## Установка пакета
 
-Для реализации патрулирования необходимо чтобы на роботе был установлен пакет ```turtlebro_patrol```
-
-#### Установить пакет ROS 
+Пакет входит в сборку метапакета `turtlebro_extra` и устанавливается автоматически при установке этого пакета. Для установки метапакета на роботе выполните команды:
 
 ```
 cd ~/catkin_ws/src
-git clone https://github.com/voltbro/turtlebro_excursions
+git clone https://github.com/voltbro/turtlebro_extra
 cd ../
-catkin_make --pkg turtlebro_excursions
+catkin_make --pkg=turtlebro_extra
 ```
 
-### Тестирование text-to-speech
+### Настройка пакета
 
-```
-echo "Однажды, в студеную зимнюю пору Я из лесу вышел. Был сильный мороз." | festival --tts --language russian
-```
+Файл с описанием точек патрулирования ```data/goals.toml```, также в файл дополнен фразами для озвучивания в точках патрулирования.
 
-__Настройка громкости динамика__
-```
-alsamixer
-```
+Файл с описанием Aruco меток ```data/aruco_text.toml```
 
 ### Запуск пакета
 
@@ -40,37 +31,16 @@ roslaunch turtlebro_excursions excursion.launch
 ```
 roslaunch turtlebro_excursions excursion_aruco.launch
 ```
-_Важное примечание!_
 
-Для того, чтобы робот начал считывать aruco маркеры, необходимо переключить работу камеры с веб-интерфейса на публикацию данных в ROS. Подробнее об этом в инструкции: https://manual.turtlebro.ru/paket-turtlebro/video
-
-### Работа пакета
-
-Пакет экскурсий реализует запуск ServiceServer, реализующий логику работы "Экскурсовода" в точках патрулирования.
-
-При запуске ноды патрулирования указывается имя сервиса, который вызывается для реализации логики в точках патрулирования.
-
-```xml
-  <!--Patrol Node -->
-  <node pkg="turtlebro_patrol" type="patrol.py" name="turtlebro_patrol" output="screen" required="true">
-    <param name="waypoints_data_file" value="$(arg waypoints_data_file)"/>    
-    <param name="point_callback_service" value="turtlebro_excursion"/>    
-  </node>
-```  
-
-### Работа с Aruco маркерами
-
-Для реализации работы с маркерами в пакете реализован ServiceServer ```aruco_detect``` который по запросу производит поиск и детекции меток. Возвращается номер самой большой найденной метки. 
-
-
-Используется тип сообщения ```ArucoDetect```
-
+Для отладки, возможно запускать пакет в режиме эмуляции патрулирования
 ```
----
-uint16 id
-uint16 size
+roslaunch turtlebro_excursions excursion.launch fake_move_base:=true
 ```
 
-Где 
-`id` Номер найденного маркера
-`size` Размер маркера (для оценки расстояния)
+### Запуск экскурсовода
+
+Пакет наследует функции патрулирования ```turtlebro_patrol```. Для начала движения робота необходимо вызвать сервис ```/patrol_control```
+
+```
+rosservice call /patrol_control "command: 'start'"
+```
