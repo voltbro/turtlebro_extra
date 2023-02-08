@@ -1,0 +1,13 @@
+[home]
+pose = {x = 0, y = 0, theta = 0}
+text = "Я дома"
+
+[[patrolling]]
+name = "Goal1"
+pose = {x = 0.5, y = 0, theta = 45}
+text = "Я в точке 1"
+
+[[patrolling]]
+name = "Goal2"
+pose = {x = 0, y = -0.5, theta = -45}
+text = "Я в точке 2"

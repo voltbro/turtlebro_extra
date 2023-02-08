@@ -1,0 +1,26 @@
+<launch>
+  <!-- Arguments -->
+  <arg name="patrol_data_file" default="$(find turtlebro_excursions)/data/goals.toml"/>
+  <arg name="fake_move_base" default="false"/>
+  <arg name="point_callback_service" default="point_speech"/>
+  
+  <!-- Excursion service -->
+  <node pkg="turtlebro_excursions" type="point_speech.py" name="excursion_point_service" output="screen" required="true">
+      <param name="patrol_data_file" value="$(arg patrol_data_file)"/>
+  </node>
+
+  <!-- Run Speech service -->
+  <include file="$(find turtlebro_speech)/launch/speech_service.launch"/>
+  
+  <!-- Run Navigation for Patroll -->
+  <include file="$(find turtlebro_patrol)/launch/navigation_slam.launch">
+      <arg name="fake_move_base" value="$(arg fake_move_base)"/>
+  </include>
+ 
+  <!--Patrol Node with point_callback_service service-->
+  <node pkg="turtlebro_patrol" type="patrol.py" name="turtlebro_patrol" output="screen" required="true">
+    <param name="config_data_file" value="$(arg patrol_data_file)"/>
+    <param name="point_callback_service" value="$(arg point_callback_service)"/>    
+  </node>
+
+</launch>
