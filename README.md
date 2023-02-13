@@ -32,19 +32,19 @@ https://github.com/voltbro/turtlebro_extra/tree/master/turtlebro_aruco
 
 https://github.com/voltbro/turtlebro_extra/tree/master/turtlebro_delivery
 
-Пакет предназначен для работы робота Turtlebro с комплектом расширения для сборки полезной нагрузки "Робот-курьер".
+Пакет предназначен для работы робота TurtleBro с комплектом расширения для сборки полезной нагрузки "Робот-курьер".
 
 ### turtlebro_excursions
 
 https://github.com/voltbro/turtlebro_extra/tree/master/turtlebro_excursions
 
-Пакет предназначен для работы робота Turtlebro с комплектом расширения для сборки полезной нагрузки "Робот-экскурсовод".
+Пакет предназначен для работы робота TurtleBro с комплектом расширения для сборки полезной нагрузки "Робот-экскурсовод".
 
 ### turtlebro_overheat_sensor
 
 https://github.com/voltbro/turtlebro_extra/tree/master/turtlebro_overheat_sensor
 
-Пакет предназначен для работы робота Turtlebro с комплектом расширения для сборки полезной нагрузки "Робот-инспектор".
+Пакет предназначен для работы робота TurtleBro с комплектом расширения для сборки полезной нагрузки "Робот-инспектор".
 
 ### turtlebro_patrol
 
