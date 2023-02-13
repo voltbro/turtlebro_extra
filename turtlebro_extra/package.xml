@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <package format="2">
   <name>turtlebro_extra</name>
-  <version>0.0.2</version>
+  <version>0.0.3</version>
   <description>The turtlebro_extra package</description>
 
   <!-- One maintainer tag required, multiple allowed, one person per tag -->
@@ -24,6 +24,9 @@
   <exec_depend>turtlebro_delivery</exec_depend>
   <exec_depend>turtlebro_speech</exec_depend>
   <exec_depend>turtlebro_patrol</exec_depend>
+  <exec_depend>turtlebro_excursions</exec_depend>
+  <exec_depend>turtlebro_actions</exec_depend>
+  <exec_depend>turtlebro_overheat_sensor</exec_depend>
 
   <!-- The export tag contains other, unspecified, tags -->
   <export>
