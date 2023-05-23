@@ -1,6 +1,7 @@
 import rospy
 import actionlib
 import turtlebro_actions
+import math
 
 from std_msgs.msg import Int16
 from turtlebro_actions.msg import MoveAction, MoveGoal
@@ -27,7 +28,7 @@ def move(meters, speed_val = 0.1):
     return moveclient.get_result()
 
 def turn(degrees, speed_val = 0.5):
-    goal = MoveGoal(goal = degrees, speed = speed_val)
+    goal = MoveGoal(goal = math.radians(degrees), speed = math.radians(speed_val))
     rclient.send_goal(goal)
     rclient.wait_for_result()
     return rclient.get_result()
