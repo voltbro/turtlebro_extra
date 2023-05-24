@@ -2,6 +2,7 @@
 import rospy
 import actionlib
 import time
+import math
 
 from math import degrees
 from tf.transformations import quaternion_multiply, quaternion_inverse, euler_from_quaternion
@@ -108,7 +109,7 @@ class RotateServer(object):
         delta_q = quaternion_multiply(prev_q, quaternion_inverse(current_q))
         (_, _, yaw) = euler_from_quaternion(delta_q)
 
-        return degrees(yaw)
+        return math.degrees(yaw)
 
     def shutdown(self):
         rospy.loginfo("Stopping the robot...")
