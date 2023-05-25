@@ -106,7 +106,7 @@ class RotateServer(object):
         current_q = [current_orientation.x, current_orientation.y,
                      current_orientation.z, current_orientation.w]
 
-        delta_q = quaternion_multiply(prev_q, quaternion_inverse(current_q))
+        delta_q = quaternion_multiply(prev_q, current_q)
         (_, _, yaw) = euler_from_quaternion(delta_q)
 
         return math.degrees(yaw)
