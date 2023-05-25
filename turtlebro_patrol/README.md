@@ -9,7 +9,7 @@
 cd ~/catkin_ws/src
 git clone https://github.com/voltbro/turtlebro_patrol
 cd ..
-catkin_make --pkg turtlebro_patrol
+catkin_make --pkg=turtlebro_patrol
 ```
 
 ## Запуск пакета патрулирования

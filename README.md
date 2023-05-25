@@ -9,7 +9,7 @@
 cd ~/catkin_ws/src
 git clone https://github.com/voltbro/turtlebro_extra
 cd ..
-catkin_make
+catkin_make --pkg=turtlebro_extra
 ```
 
 ## Доступные пакеты для роботов компании "Братья Вольт" в пакете  turtlebro_extra
