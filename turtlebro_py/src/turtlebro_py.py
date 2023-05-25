@@ -71,7 +71,7 @@ def turn(degrees, speed_val = 0.5):
         rospy.sleep(0.05)
 
 def color(col):
-    rgb = {"red":1, "green":2, "blue":3, "white":4, "off":5}
+    rgb = {"red":1, "green":2, "blue":3, "white":4, "yellow":5, "off":6}
     shade = Int16()
     shade.data = rgb[col]
     colorpub.publish(col)
