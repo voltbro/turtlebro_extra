@@ -1,6 +1,6 @@
 import rospy
 import turtlebro_actions
-from math import degrees
+from math import degrees,sqrt, radians
 import cv2
 import numpy as np
 
@@ -13,6 +13,8 @@ from sensor_msgs.msg import LaserScan, CompressedImage
 
 odom = Odometry()
 scan = LaserScan()
+names_of_func_to_call = {}
+
 
 len_of_scan_ranges = 1160
 
@@ -24,47 +26,61 @@ def subscriber_scan_cb(msg):
     global scan
     scan = msg
 
+def subscriber_buttons_cb(msg):
+    try:
+        names_of_func_to_call[msg.data]()
+    except BaseException:
+        pass
+
+def call(name, button = 24):
+    global names_of_func_to_call
+    names_of_func_to_call[button] = name
+
 
 colorpub = rospy.Publisher("/color_led", Int16, queue_size=10)
 vel_pub = rospy.Publisher('/cmd_vel', Twist, queue_size=1)
 rospy.Subscriber("/odom", Odometry, subscriber_odometry_cb)
 rospy.Subscriber("/scan", LaserScan, subscriber_scan_cb)
+rospy.Subscriber("/buttons", Int16, subscriber_buttons_cb)
 
 rospy.init_node("tb_py")
 
 def sleep(time):
     rospy.sleep(time)
 
-def move(meters, speed_val = 0.1):
+def move(meters, speed_val = 0.05):
     init_position = odom
-    vel = Twist()
-    fixed_inkiln = 0.01 #fixed distance (in m.) there acceleration/decceleration is performing 
+    init_x = 0
+    distance_passed = 0
+    epsilon = 0.001
+    vel = Twist() 
     while not rospy.is_shutdown():
-        if (odom.pose.pose.position.x - init_position.pose.pose.position.x < meters):
-            vel.linear.x = vel_move_value(speed_val, fixed_inkiln, init_position.pose.pose.position.x, odom.pose.pose.position.x, meters) 
-            print(vel.linear.x)
+        distance_passed = sqrt((odom.pose.pose.position.x - init_position.pose.pose.position.x)**2 + (odom.pose.pose.position.y - init_position.pose.pose.position.y)**2)
+        if (distance_passed + epsilon < meters):
+            vel.linear.x = vel_x_move_value(speed_val, init_x, distance_passed, meters)
             vel_pub.publish(vel)
         else:
             vel.linear.x = 0
             vel_pub.publish(vel)
+            print("m ", distance_passed)
             return
         rospy.sleep(0.05)
 
-def turn(degrees, speed_val = 0.5):
-    degree_delta = 0
+def turn(degrees, speed_val = 0.2):
+    angle_delta = 0
     prev_pose = odom
-    init_position = 0
+    init_angle = 0
     vel = Twist()
-    fixed_inkiln = 3 #fixed angle (in deg.) there acceleration/decceleration is performing
+    epsilon = 0.01
+    angle = radians(degrees)
     while not rospy.is_shutdown():
-        print(degree_delta)
-        if (degree_delta < degrees):
-            vel.angular.z = vel_move_value(speed_val, fixed_inkiln, init_position, degree_delta, degrees)
+        if (angle_delta + epsilon < angle):
+            vel.angular.z = vel_z_turn_value(speed_val, init_angle, angle_delta, angle)
             vel_pub.publish(vel)
-            #print(vel.angular.z)
-            degree_delta += get_degree_diff(prev_pose.pose.pose.orientation, odom.pose.pose.orientation)
+            angle_delta += get_angle_diff(prev_pose.pose.pose.orientation, odom.pose.pose.orientation)
             prev_pose = odom
         else:
+            print("a", angle_delta)
             vel.angular.z = 0
             vel_pub.publish(vel)
             return
@@ -95,21 +111,38 @@ def photo(name = "robophoto"):
     image_from_ros_camera = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
     cv2.imwrite("/home/pi/"+ name +".jpg", image_from_ros_camera)
 
-def vel_move_value(speed, fixed_inklin, init_x, curent_x, aim_x):
+def vel_x_move_value(speed, init_x, curent_x, aim_x):
+    fixed_inklin = 0.01 #fixed distance (in m.) there acceleration/decceleration is performing
     if (curent_x == init_x):
         return 0.01
     elif (curent_x < init_x):
         return (init_x - curent_x) * speed
     elif (curent_x > aim_x):
-        return (aim_x - curent_x) * speed
-    if ((curent_x - init_x) < fixed_inklin):
+        return 0
+    elif ((curent_x - init_x) < fixed_inklin):
         return ((curent_x - init_x) / fixed_inklin) * speed
     elif((aim_x - curent_x) < fixed_inklin):
         return (aim_x - curent_x) * speed
     else:
         return speed
-        
-def get_degree_diff(prev_orientation, current_orientation):
+    
+def vel_z_turn_value(speed, init_x, curent_x, aim_x):
+    fixed_inklin = 0.08 #fixed angle (in deg.) there acceleration/decceleration is performing
+    Kp = 2
+    if (curent_x == init_x):
+        return 0.01
+    elif (curent_x < init_x):
+        return (init_x - curent_x) * speed * Kp
+    elif (curent_x > aim_x):
+        return 0
+    elif ((curent_x - init_x) < fixed_inklin):
+        return ((curent_x - init_x) / fixed_inklin) * speed * Kp
+    elif((aim_x - curent_x) < fixed_inklin):
+        return (aim_x - curent_x) * speed * Kp
+    else:
+        return speed
+
+def get_angle_diff(prev_orientation, current_orientation):
     prev_q = [prev_orientation.x, prev_orientation.y,
                 prev_orientation.z, prev_orientation.w]
     current_q = [current_orientation.x, current_orientation.y,
@@ -117,7 +150,7 @@ def get_degree_diff(prev_orientation, current_orientation):
 
     delta_q = quaternion_multiply(prev_q, quaternion_inverse(current_q))
     (_, _, yaw) = euler_from_quaternion(delta_q)
-    return -degrees(yaw)
+    return -yaw
 
 def init():
     global len_of_scan_ranges, retscan, step_of_angles
