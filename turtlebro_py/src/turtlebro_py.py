@@ -15,9 +15,6 @@ odom = Odometry()
 scan = LaserScan()
 names_of_func_to_call = {}
 
-cb_done = True
-
-
 len_of_scan_ranges = 1160
 
 def subscriber_odometry_cb(msg):
@@ -29,16 +26,12 @@ def subscriber_scan_cb(msg):
     scan = msg
 
 def subscriber_buttons_cb(msg):
-    global cb_done
     try:
-        if(cb_done):
-            if(msg.data):
-                cb_done = False
-                names_of_func_to_call[msg.data]()
-                rospy.sleep(0.1) #workaround for non lib functions
-                cb_done = True
-            else:
-                print("else")
+        if(msg.data):
+            names_of_func_to_call[msg.data]()
+            rospy.sleep(0.5) #workaround for non lib functions
+        else:
+            print("else")
     except BaseException:
         print("OSHIBKO")
         pass
@@ -52,7 +45,7 @@ colorpub = rospy.Publisher("/color_led", Int16, queue_size=10)
 vel_pub = rospy.Publisher('/cmd_vel', Twist, queue_size=1)
 rospy.Subscriber("/odom", Odometry, subscriber_odometry_cb)
 rospy.Subscriber("/scan", LaserScan, subscriber_scan_cb)
-rospy.Subscriber("/buttons", Int16, subscriber_buttons_cb)
+rospy.Subscriber("/buttons", Int16, subscriber_buttons_cb, queue_size=1)
 
 rospy.init_node("tb_py")
 
@@ -60,7 +53,6 @@ def sleep(time):
     rospy.sleep(time)
 
 def move(meters, speed_val = 0.05):
-    global cb_done
     init_position = odom
     init_x = 0
     distance_passed = 0
@@ -75,12 +67,10 @@ def move(meters, speed_val = 0.05):
             vel.linear.x = 0
             vel_pub.publish(vel)
             print("m ", distance_passed)
-            cb_done = True
             return
         rospy.sleep(0.05)
 
 def turn(degrees, speed_val = 0.2):
-    global cb_done
     angle_delta = 0
     prev_pose = odom
     init_angle = 0
@@ -97,7 +87,6 @@ def turn(degrees, speed_val = 0.2):
             print("a", angle_delta)
             vel.angular.z = 0
             vel_pub.publish(vel)
-            cb_done = True
             return
         rospy.sleep(0.05)
 
