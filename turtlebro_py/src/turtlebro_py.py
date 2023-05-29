@@ -102,15 +102,17 @@ def color(col):
 def distance(angle = 0):
     if (angle == 0):
         return scan.ranges[0]
-    elif angle:
+    elif angle < 360:
         return scan.ranges[int(angle*step_of_angles)]
-    else:
+    elif angle == 360:
         j = 0
         for i in range(len(scan.ranges)):
             k = int(j / step_of_angles)
             j += 1
             retscan[k] = i
         return retscan
+    else:
+        return None
     
 def photo(name = "robophoto"):
     image_msg = rospy.wait_for_message("/front_camera/image_raw/compressed", CompressedImage)
