@@ -1,6 +1,7 @@
 import rospy
 import turtlebro_actions
-from math import sqrt, radians
+from math import sqrt, radians 
+from math import degrees as dg
 import cv2
 import numpy as np
 
@@ -10,6 +11,9 @@ from std_msgs.msg import Int16
 from geometry_msgs.msg import Twist, Point, Quaternion
 from nav_msgs.msg import Odometry
 from sensor_msgs.msg import LaserScan, CompressedImage
+
+
+DEBUG = 0
 
 odom = Odometry()
 scan = LaserScan()
@@ -30,10 +34,7 @@ def subscriber_buttons_cb(msg):
         if(msg.data):
             names_of_func_to_call[msg.data]()
             rospy.sleep(0.5) #workaround for non lib functions
-        else:
-            print("else")
     except BaseException:
-        print("OSHIBKO")
         pass
 
 def call(name, button = 24):
@@ -41,7 +42,7 @@ def call(name, button = 24):
     names_of_func_to_call[button] = name
 
 
-colorpub = rospy.Publisher("/color_led", Int16, queue_size=10)
+colorpub = rospy.Publisher("/py_leds", Int16, queue_size=10)
 vel_pub = rospy.Publisher('/cmd_vel', Twist, queue_size=1)
 rospy.Subscriber("/odom", Odometry, subscriber_odometry_cb)
 rospy.Subscriber("/scan", LaserScan, subscriber_scan_cb)
@@ -49,14 +50,14 @@ rospy.Subscriber("/buttons", Int16, subscriber_buttons_cb, queue_size=1)
 
 rospy.init_node("tb_py")
 
-def sleep(time):
+def wait(time):
     rospy.sleep(time)
 
 def move(meters, speed_val = 0.05):
     init_position = odom
     init_x = 0
     distance_passed = 0
-    epsilon = 0.001
+    epsilon = 0.005
     vel = Twist() 
     while not rospy.is_shutdown():
         distance_passed = sqrt((odom.pose.pose.position.x - init_position.pose.pose.position.x)**2 + (odom.pose.pose.position.y - init_position.pose.pose.position.y)**2)
@@ -66,7 +67,8 @@ def move(meters, speed_val = 0.05):
         else:
             vel.linear.x = 0
             vel_pub.publish(vel)
-            print("m ", distance_passed)
+            if DEBUG:
+                print("Proehal m.:", distance_passed)
             return
         rospy.sleep(0.05)
 
@@ -84,17 +86,18 @@ def turn(degrees, speed_val = 0.2):
             angle_delta += get_angle_diff(prev_pose.pose.pose.orientation, odom.pose.pose.orientation)
             prev_pose = odom
         else:
-            print("a", angle_delta)
             vel.angular.z = 0
             vel_pub.publish(vel)
+            if DEBUG:
+                print("Povernul gradusov:", dg(angle_delta))
             return
         rospy.sleep(0.05)
 
 def color(col):
-    rgb = {"red":1, "green":2, "blue":3, "white":4, "yellow":5, "off":6}
+    rgb = {"red":1, "green":2, "blue":3, "yellow":4, "white":5, "off":6}
     shade = Int16()
-    shade.data = rgb[col]
-    colorpub.publish(col)
+    shade.data = int(rgb[col])
+    colorpub.publish(shade)
 
 def distance(angle = 0):
     if (angle == 0):
@@ -114,6 +117,8 @@ def photo(name = "robophoto"):
     np_arr = np.frombuffer(image_msg.data, np.uint8)
     image_from_ros_camera = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
     cv2.imwrite("/home/pi/"+ name +".jpg", image_from_ros_camera)
+    if DEBUG:
+        print("Photo zapisano v /home/pi/" + name +".jpg")
 
 def vel_x_move_value(speed, init_x, curent_x, aim_x):
     fixed_inklin = 0.01 #fixed distance (in m.) there acceleration/decceleration is performing
