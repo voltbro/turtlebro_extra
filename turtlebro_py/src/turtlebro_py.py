@@ -1,5 +1,5 @@
 import rospy
-import turtlebro_actions
+import subprocess
 from math import sqrt, radians 
 from math import degrees as dg
 import cv2
@@ -121,6 +121,11 @@ def photo(name = "robophoto"):
     cv2.imwrite("/home/pi/"+ name +".jpg", image_from_ros_camera)
     if DEBUG:
         print("Photo zapisano v /home/pi/" + name +".jpg")
+
+def record(timeval = 3, filename = "turtlebro_sound"):
+    p = subprocess.Popen(["arecord", "-D", "hw:1,0", "-f", "S16_LE", "-r 48000", "/home/pi/" + filename + ".ogg"]) 
+    rospy.sleep(timeval)
+    p.kill()
 
 def vel_x_move_value(speed, init_x, curent_x, aim_x):
     fixed_inklin = 0.01 #fixed distance (in m.) there acceleration/decceleration is performing
