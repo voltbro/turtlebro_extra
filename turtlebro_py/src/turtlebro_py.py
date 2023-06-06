@@ -12,6 +12,8 @@ from geometry_msgs.msg import Twist, Point, Quaternion
 from nav_msgs.msg import Odometry
 from sensor_msgs.msg import LaserScan, CompressedImage
 
+from turtlebro_speech.srv import Speech, SpeechResponse, SpeechRequest 
+
 
 DEBUG = 0
 
@@ -127,6 +129,11 @@ def record(timeval = 3, filename = "turtlebro_sound"):
     rospy.sleep(timeval)
     p.kill()
 
+def say(text = "Привет"):
+    speech_service.wait_for_service()
+    speech_service.call(SpeechRequest(data = text))
+    
+
 def vel_x_move_value(speed, init_x, curent_x, aim_x):
     fixed_inklin = 0.01 #fixed distance (in m.) there acceleration/decceleration is performing
     if (curent_x == init_x):
@@ -169,10 +176,11 @@ def get_angle_diff(prev_orientation, current_orientation):
     return -yaw
 
 def init():
-    global len_of_scan_ranges, retscan, step_of_angles
+    global len_of_scan_ranges, retscan, step_of_angles, speech_service
     len_of_scan_ranges = len(scan.ranges)
     step_of_angles = len_of_scan_ranges / 360
     retscan = [0 for i in range(360)]
+    speech_service = rospy.ServiceProxy('festival_speech', Speech)
     rospy.sleep(0.5)
 
 init()
