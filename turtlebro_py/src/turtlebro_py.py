@@ -6,24 +6,27 @@ from math import degrees as dg
 import cv2
 import numpy as np
 
-from tf.transformations import quaternion_multiply, quaternion_inverse, euler_from_quaternion
+from tf.transformations import quaternion_multiply, quaternion_inverse, euler_from_quaternion, quaternion_from_euler
 
 from std_msgs.msg import Int16
 from geometry_msgs.msg import Twist, Point, Quaternion
 from nav_msgs.msg import Odometry
 from sensor_msgs.msg import LaserScan, CompressedImage
 
-from turtlebro_speech.srv import Speech, SpeechResponse, SpeechRequest 
+from turtlebro_speech.srv import Speech, SpeechResponse, SpeechRequest
+from std_srvs.srv import Empty
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 
 
 DEBUG = 0
 
-class Robot():
+class TurtleBro():
 
     def __init__(self):
-        self.u = Utility()
         rospy.init_node("tb_py")
+
+        self.u = Utility()
+        
         self.odom = Odometry()
         self.scan = LaserScan()
         
@@ -36,17 +39,17 @@ class Robot():
         
         rospy.Subscriber("/odom", Odometry, self.__subscriber_odometry_cb)
 
-    def forward(self, meters, speed_val = 0.05):
-        self.__move(meters, speed_val = 0.05)
+    def forward(self, meters):
+        self.__move(meters)
 
-    def backward(self, meters, speed_val = 0.05):
-        self.__move(-meters, speed_val = 0.05)
+    def backward(self, meters):
+        self.__move(-meters)
 
-    def right(self, degrees, speed_val = 0.2):
-        self.__turn(-degrees, speed_val = 0.2) 
+    def right(self, degrees):
+        self.__turn(-degrees) 
 
-    def left(self, degrees, speed_val = 0.2):
-        self.__turn(degrees, speed_val = 0.2)
+    def left(self, degrees):
+        self.__turn(degrees)
 
     def goto(self, x, y):
         heading = self.__get_turn_angle_to_point(x, y)
@@ -66,8 +69,11 @@ class Robot():
     def speed(self, value):
         Kp = 10
         speed_dict = {"fastest":0.17, "fast":0.12, "normal":0.09, "slow":0.04, "slowest":0.01}
-        self.linear_x_val = speed_dict[value]
-        self.angular_z_val = Kp * self.linear_x_val
+        if type(value) == str:
+            self.linear_x_val = speed_dict[value]
+        else:
+            self.linear_x_val = Utility.__clamp(0.01, value, 0.17)
+            self.angular_z_val = Kp * self.linear_x_val
 
     def __subscriber_odometry_cb(self, msg):
         self.odom = msg
@@ -162,22 +168,109 @@ class Robot():
     def __get_distance_to_point(self, x, y):
         distance = sqrt((self.odom.pose.pose.position.x - x)**2 + (self.odom.pose.pose.position.y - y)**2)
         return distance
+
+class TurtleNav():
     
+    def __init__(self):
+        self.u = Utility()
+        rospy.init_node("tb_nav_py")
+        self.odom = Odometry()
+        self.scan = LaserScan()
+        
+        self.names_of_func_to_call = {}
+
+        self.linear_x_val = 0.09
+        self.angular_z_val = 0.9
+
+        rospy.Subscriber("/odom", Odometry, self.__subscriber_odometry_cb)
+        self.vel_pub = rospy.Publisher('/cmd_vel', Twist, queue_size=1)
+
+        self.movebase_client = actionlib.SimpleActionClient('move_base', MoveBaseAction)
+
+    def forward(self, meters, speed_val = 0.05):
+        self.__move(meters, speed_val = 0.05)
+
+    def backward(self, meters, speed_val = 0.05):
+        self.__move(-meters, speed_val = 0.05)
+
+    def right(self, degrees, speed_val = 0.2):
+        self.__turn(-degrees, speed_val = 0.2) 
+
+    def left(self, degrees, speed_val = 0.2):
+        self.__turn(degrees, speed_val = 0.2)
+
+    def goto(self, x, y):
+        self.__goto(x,y)
+
+    def call(self, name, button = 24):
+        self.u.__call(name, button)
+    
+    def wait(self, time):
+        self.u.__wait(time)
+
+    def color(self, col):
+        self.u.__color(col)
+
+    """
+    def speed(self, value): #TODO
+        Kp = 10
+        speed_dict = {"fastest":0.17, "fast":0.12, "normal":0.09, "slow":0.04, "slowest":0.01}
+        if type(value) == str:
+            self.linear_x_val = speed_dict[value]
+        else:
+            self.linear_x_val = Utility.__clamp(0.01, value, 0.17)
+            self.angular_z_val = Kp * self.linear_x_val
+    """
+
+    def __subscriber_odometry_cb(self, msg):
+        self.odom = msg
+    
+    def __goal_message_assemble(self, x ,y, theta = 0):
+        # Creates a new goal with the MoveBaseGoal constructor
+        goal = MoveBaseGoal()
+        # Move to x, y meters of the "map" coordinate frame 
+        goal.target_pose.header.frame_id = "map"
+        goal.target_pose.header.stamp = rospy.Time.now()
+        goal.target_pose.pose.position.x = float(x)
+        goal.target_pose.pose.position.y = float(y)
+
+        q = quaternion_from_euler(0, 0, radians(float(theta)))
+        goal.target_pose.pose.orientation.x = q[0]
+        goal.target_pose.pose.orientation.y = q[1]
+        goal.target_pose.pose.orientation.z = q[2]
+        goal.target_pose.pose.orientation.w = q[3]
+
+        return goal
+
+    def __move(self, meters):
+        goal = self.__goal_message_assemble(meters)
+        self.movebase_client.wait_for_server()
+        self.movebase_client.send_goal_and_wait(goal)
+
+    def __turn(self, degrees):
+        goal = self.__goal_message_assemble(0, theta = radians(degrees))
+        self.movebase_client.wait_for_server()
+        self.movebase_client.send_goal_and_wait(goal)
+
 
 class Utility():
 
     def __init__(self):
-        rospy.sleep(0.5)
-
         rospy.Subscriber("/scan", LaserScan, self.__subscriber_scan_cb)
         rospy.Subscriber("/buttons", Int16, self.__subscriber_buttons_cb, queue_size=1)
-
         self.colorpub = rospy.Publisher("/py_leds", Int16, queue_size=10)
+        
+        odom_reset = rospy.ServiceProxy('reset', Empty)
+        odom_reset.wait_for_service()
+        #odom_reset.call(Empty())
+
+        rospy.sleep(0.5)
 
         self.len_of_scan_ranges = len(self.scan.ranges)
         self.step_of_angles = self.len_of_scan_ranges / 360
         self.retscan = [0 for i in range(360)]
         self.speech_service = rospy.ServiceProxy('festival_speech', Speech)
+        
 
     def __call(self, name, button = 24):
         self.names_of_func_to_call[button] = name
@@ -233,3 +326,6 @@ class Utility():
     def __say(self, text = "Привет"):
         self.speech_service.wait_for_service()
         self.speech_service.call(SpeechRequest(data = text))
+
+    def __clamp(min_val, value, max_val):
+        return max(min_val, min(value, max_val))
