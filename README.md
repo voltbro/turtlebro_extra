@@ -58,3 +58,17 @@ https://github.com/voltbro/turtlebro_extra/tree/master/turtlebro_speech
 
 Пакет предназначен для осуществления звукового сопровождения различных дополнительных пакетов (turtlebro_delivery, turtlebro_excursions и д.р.).
 
+## Работа пакета turtlebro_extra на компьютере
+
+В случае, если необходимо запустить работу одного из пакетов входящих в метапакет **turtlebro_extra** на компьютере, то для начала необходимо сконфигурировать собственное рабочее пространство:
+
+```
+cd
+mkdir -p ~/catkin_ws/src
+cd ~/catkin_ws/
+catkin_make
+```
+Далее добавить ссылку на рабочее пространство в файл *bashrc*:
+```
+echo "source /home/$USER/catkin_ws/devel/setup.bash" >> ~/.bashrc source ~/.bashrc
+```
