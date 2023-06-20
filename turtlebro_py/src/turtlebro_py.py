@@ -274,7 +274,7 @@ class Utility():
 
         self.len_of_scan_ranges = len(self.scan.ranges)
         self.step_of_angles = self.len_of_scan_ranges / 360
-        self.retscan = [0 for i in range(360)]
+        self.retscan = [0] * 360
         self.speech_service = rospy.ServiceProxy('festival_speech', Speech)
         
 
