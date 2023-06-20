@@ -1,8 +1,7 @@
 import rospy
 import actionlib
 import subprocess
-from math import sqrt, radians, atan2 
-from math import degrees as dg
+import math
 import cv2
 import numpy as np
 
@@ -88,7 +87,7 @@ class TurtleBro():
         epsilon = 0.005
         vel = Twist() 
         while not rospy.is_shutdown():
-            distance_passed = sqrt((self.odom.pose.pose.position.x - init_position.pose.pose.position.x)**2 + (self.odom.pose.pose.position.y - init_position.pose.pose.position.y)**2)
+            distance_passed = math.sqrt((self.odom.pose.pose.position.x - init_position.pose.pose.position.x)**2 + (self.odom.pose.pose.position.y - init_position.pose.pose.position.y)**2)
             if (distance_passed + epsilon < abs(meters)):
                 if meters > 0:
                     vel.linear.x = self.__vel_x_move_value(self.linear_x_val, init_x, distance_passed, meters)
@@ -109,7 +108,7 @@ class TurtleBro():
         init_angle = 0
         vel = Twist()
         epsilon = 0.03
-        angle = radians(degrees)
+        angle = math.radians(degrees)
         while not rospy.is_shutdown():
             if (abs(angle_delta) + epsilon < abs(angle)):
                 if angle > 0:
@@ -123,7 +122,7 @@ class TurtleBro():
                 vel.angular.z = 0
                 self.vel_pub.publish(vel)
                 if DEBUG:
-                    print("Povernul gradusov:", dg(angle_delta))
+                    print("Povernul gradusov:", math.degrees(angle_delta))
                 return
             rospy.sleep(0.05)
     
@@ -170,12 +169,12 @@ class TurtleBro():
 
     def __get_turn_angle_to_point(self, x, y):
         (_, _, yaw) = euler_from_quaternion(self.odom.pose.pose.orientation)
-        heading = atan2(y,x)
+        heading = math.atan2(y,x)
         angle_to_turn = yaw - heading
         return angle_to_turn
 
     def __get_distance_to_point(self, x, y):
-        distance = sqrt((self.odom.pose.pose.position.x - x)**2 + (self.odom.pose.pose.position.y - y)**2)
+        distance = math.sqrt((self.odom.pose.pose.position.x - x)**2 + (self.odom.pose.pose.position.y - y)**2)
         return distance
 
 class TurtleNav():
@@ -243,7 +242,7 @@ class TurtleNav():
         goal.target_pose.pose.position.x = float(x)
         goal.target_pose.pose.position.y = float(y)
 
-        q = quaternion_from_euler(0, 0, radians(float(theta)))
+        q = quaternion_from_euler(0, 0, math.radians(float(theta)))
         goal.target_pose.pose.orientation.x = q[0]
         goal.target_pose.pose.orientation.y = q[1]
         goal.target_pose.pose.orientation.z = q[2]
@@ -257,7 +256,7 @@ class TurtleNav():
         self.movebase_client.send_goal_and_wait(goal)
 
     def __turn(self, degrees):
-        goal = self.__goal_message_assemble(0, theta = radians(degrees))
+        goal = self.__goal_message_assemble(0, theta = math.radians(degrees))
         self.movebase_client.wait_for_server()
         self.movebase_client.send_goal_and_wait(goal)
 
