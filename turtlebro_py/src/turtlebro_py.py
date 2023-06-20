@@ -36,15 +36,19 @@ class TurtleBro():
         rospy.sleep(0.5)
 
     def forward(self, meters):
+        assert meters > 0, "Ошибка! Количество метров должно быть положительным"
         self.__move(meters)
 
     def backward(self, meters):
+        assert meters > 0, "Ошибка! Количество метров должно быть положительным"
         self.__move(-meters)
 
     def right(self, degrees):
+        assert degrees > 0, "Ошибка! Количество градусов должно быть положительным"
         self.__turn(-degrees) 
 
     def left(self, degrees):
+        assert degrees > 0, "Ошибка! Количество градусов должно быть положительным"
         self.__turn(degrees)
 
     def goto(self, x, y):
