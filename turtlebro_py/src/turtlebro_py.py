@@ -20,6 +20,19 @@ from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 DEBUG = 1
 
 class TurtleBro():
+    """
+    Простой робот. Умеет ехать вперед - forward()
+    назад - backward()
+    поворачивать направо и налево - right(), left()
+    ехать на определенные координаты (x,y) - goto(x,y)
+    зажигать светодиоды - color()
+    снимать фото - photo()
+    записывать звук - record()
+    измерять дистанцию - distance()
+    вызывать пользовательские функции при нажатии на кнопку - call()
+    произносить фразы - say()
+    находиться в режиме ожидания - wait()
+    """
 
     def __init__(self):
         rospy.init_node("tb_py")
@@ -32,7 +45,11 @@ class TurtleBro():
         self.linear_x_val = 0.09
         self.angular_z_val = 0.9
      
-        rospy.sleep(0.5)
+        rospy.sleep(0.3)
+
+    def __del__(self):
+        self.vel_pub.publish(Twist())
+        print("Done")
 
     def forward(self, meters):
         assert meters > 0, "Ошибка! Количество метров должно быть положительным"
@@ -261,9 +278,7 @@ class TurtleNav():
         self.odom = msg
     
     def __goal_message_assemble(self, x ,y, theta = 0):
-        # Creates a new goal with the MoveBaseGoal constructor
         goal = MoveBaseGoal()
-        # Move to x, y meters of the "map" coordinate frame 
         goal.target_pose.header.frame_id = "map"
         goal.target_pose.header.stamp = rospy.Time.now()
         goal.target_pose.pose.position.x = float(x)
@@ -301,17 +316,20 @@ class Utility():
         rospy.Subscriber("/buttons", Int16, self.__subscriber_buttons_cb, queue_size=1)
         self.colorpub = rospy.Publisher("/py_leds", Int16, queue_size=10)
         
-        rospy.sleep(0.5)
+        rospy.sleep(0.3)
 
         odom_reset = rospy.ServiceProxy('reset', Empty)
         odom_reset.wait_for_service()
-        #odom_reset.call(Empty())
+        #odom_reset.call(Empty())                                                                       #TODO!!!!!!!
 
         self.len_of_scan_ranges = len(self.scan.ranges)
         self.step_of_angles = self.len_of_scan_ranges / 360
         self.retscan = [0] * 360
         self.speech_service = rospy.ServiceProxy('festival_speech', Speech)
-        
+    
+    def __del__(self):
+        self.color("blue")
+
     def __subscriber_scan_cb(self, msg):
         self.scan = msg
 
