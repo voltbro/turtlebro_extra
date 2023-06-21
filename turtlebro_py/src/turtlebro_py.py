@@ -57,15 +57,29 @@ class TurtleBro():
         self.__move(distance)
 
     def call(self, name, button = 24):
-        self.u.__call(name, button)
+        self.u.call(name, button)
     
     def wait(self, time):
-        self.u.__wait(time)
+        self.u.wait(time)
 
     def color(self, col):
-        self.u.__color(col)
+        self.u.color(col)
+    
+    def photo(self, name = "robophoto"):
+        self.u.photo(name)
+
+    def record(self, timeval = 3, filename = "turtlebro_sound"):
+        self.u.record(timeval, filename)
+
+    def say(self, text = "Привет"):
+        self.speech_service.wait_for_service()
+        self.speech_service.call(SpeechRequest(data = text))
+    
+    def distance(self, angle = 0):
+        return self.u.distance(angle)
 
     def speed(self, value):
+        assert type(value) == str, "Скорость должно быть одним из слов: fastest, fast, normal, slow, slowest"
         Kp = 10
         speed_dict = {"fastest":0.17, "fast":0.12, "normal":0.09, "slow":0.04, "slowest":0.01}
         if type(value) == str:
@@ -98,7 +112,7 @@ class TurtleBro():
                 vel.linear.x = 0
                 self.vel_pub.publish(vel)
                 if DEBUG:
-                    print("Proehal m.:", distance_passed)
+                    print("Проехал м.:", distance_passed)
                 return
             rospy.sleep(0.05)
 
@@ -122,7 +136,7 @@ class TurtleBro():
                 vel.angular.z = 0
                 self.vel_pub.publish(vel)
                 if DEBUG:
-                    print("Povernul gradusov:", math.degrees(angle_delta))
+                    print("Повернул град.:", math.degrees(angle_delta))
                 return
             rospy.sleep(0.05)
     
@@ -211,13 +225,26 @@ class TurtleNav():
         self.__goto(x,y)
 
     def call(self, name, button = 24):
-        self.u.__call(name, button)
+        self.u.call(name, button)
     
     def wait(self, time):
-        self.u.__wait(time)
+        self.u.wait(time)
 
     def color(self, col):
-        self.u.__color(col)
+        self.u.color(col)
+
+    def photo(self, name = "robophoto"):
+        self.u.photo(name)
+
+    def record(self, timeval = 3, filename = "turtlebro_sound"):
+        self.u.record(timeval, filename)
+
+    def say(self, text = "Привет"):
+        self.speech_service.wait_for_service()
+        self.speech_service.call(SpeechRequest(data = text))
+    
+    def distance(self, angle = 0):
+        return self.u.distance(angle)
 
     """
     def speed(self, value): #TODO
@@ -260,6 +287,11 @@ class TurtleNav():
         self.movebase_client.wait_for_server()
         self.movebase_client.send_goal_and_wait(goal)
 
+    def __goto(self, x, y):
+        goal = self.__goal_message_assemble(x, y)
+        self.movebase_client.wait_for_server()
+        self.movebase_client.send_goal_and_wait(goal)
+
 
 class Utility():
 
@@ -280,13 +312,6 @@ class Utility():
         self.retscan = [0] * 360
         self.speech_service = rospy.ServiceProxy('festival_speech', Speech)
         
-
-    def __call(self, name, button = 24):
-        self.names_of_func_to_call[button] = name
-    
-    def __wait(self, time):
-        rospy.sleep(time)
-
     def __subscriber_scan_cb(self, msg):
         self.scan = msg
 
@@ -297,14 +322,22 @@ class Utility():
                 rospy.sleep(0.5) #workaround for non lib functions
         except BaseException:
             pass
+
+    def call(self, name, button = 24):
+        self.names_of_func_to_call[button] = name
     
-    def __color(self, col):
+    def wait(self, time):
+        rospy.sleep(time)
+
+    def color(self, col):
+        assert type(col) == str, "Имя цвета должно быть строкой"
         rgb = {"red":1, "green":2, "blue":3, "yellow":4, "white":5, "off":6}
         shade = Int16()
         shade.data = int(rgb[col])
         self.colorpub.publish(shade)
 
-    def __distance(self, angle = 0):
+    def distance(self, angle):
+        assert type(angle) == (int or float), "Угол должен быть числом"
         if (angle == 0):
             return self.scan.ranges[0]
         elif angle < 360:
@@ -319,20 +352,23 @@ class Utility():
         else:
             return None
     
-    def __photo(self, name = "robophoto"):
+    def photo(self, name = "robophoto"): 
+        assert type(name) == str, "Имя файла фото должно быть строкой"
         image_msg = rospy.wait_for_message("/front_camera/image_raw/compressed", CompressedImage)
         np_arr = np.frombuffer(image_msg.data, np.uint8)
         image_from_ros_camera = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
         cv2.imwrite("/home/pi/"+ name +".jpg", image_from_ros_camera)
         if DEBUG:
-            print("Photo zapisano v /home/pi/" + name +".jpg")
+            print("Фото записано в /home/pi/" + name +".jpg")
 
-    def __record(self, timeval = 3, filename = "turtlebro_sound"):
+    def record(self, timeval, filename):
+        assert timeval > 0 and type(timeval) == (float or int), "Временной интервал должен быть положительным числом"
         p = subprocess.Popen(["arecord", "-D", "hw:1,0", "-f", "S16_LE", "-r 48000", "/home/pi/" + filename + ".ogg"]) 
         rospy.sleep(timeval)
         p.kill()
 
-    def __say(self, text = "Привет"):
+    def say(self, text = "Привет"):
+        assert type(text) == str, "Текст должен быть строкой"
         self.speech_service.wait_for_service()
         self.speech_service.call(SpeechRequest(data = text))
 
