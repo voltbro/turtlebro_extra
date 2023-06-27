@@ -312,6 +312,7 @@ class Utility():
 
     def __init__(self):
         self.scan = LaserScan()
+        self.names_of_func_to_call = {}
         rospy.Subscriber("/scan", LaserScan, self.__subscriber_scan_cb)
         rospy.Subscriber("/buttons", Int16, self.__subscriber_buttons_cb, queue_size=1)
         self.colorpub = rospy.Publisher("/py_leds", Int16, queue_size=10)
