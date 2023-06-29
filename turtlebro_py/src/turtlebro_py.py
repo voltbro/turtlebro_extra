@@ -89,8 +89,7 @@ class TurtleBro():
         self.u.record(timeval, filename)
 
     def say(self, text = "Привет"):
-        self.speech_service.wait_for_service()
-        self.speech_service.call(SpeechRequest(data = text))
+        self.u.say(text)
     
     def distance(self, angle = 0):
         return self.u.distance(angle)
@@ -255,10 +254,9 @@ class TurtleNav():
 
     def record(self, timeval = 3, filename = "turtlebro_sound"):
         self.u.record(timeval, filename)
-
+        
     def say(self, text = "Привет"):
-        self.speech_service.wait_for_service()
-        self.speech_service.call(SpeechRequest(data = text))
+        self.u.say(text)
     
     def distance(self, angle = 0):
         return self.u.distance(angle)
@@ -387,7 +385,7 @@ class Utility():
         rospy.sleep(timeval)
         p.kill()
 
-    def say(self, text = "Привет"):
+    def say(self, text):
         assert type(text) == str, "Текст должен быть строкой"
         self.speech_service.wait_for_service()
         self.speech_service.call(SpeechRequest(data = text))
