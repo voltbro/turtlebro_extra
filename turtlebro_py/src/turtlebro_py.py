@@ -382,7 +382,7 @@ class Utility():
             print("Фото записано в /home/pi/" + name +".jpg")
 
     def record(self, timeval, filename):
-        assert timeval > 0 and type(timeval) == (float or int), "Временной интервал должен быть положительным числом"
+        assert timeval > 0 and (type(timeval) == float or type(timeval) == int), "Временной интервал должен быть положительным числом"
         p = subprocess.Popen(["arecord", "-D", "hw:1,0", "-f", "S16_LE", "-r 48000", "/home/pi/" + filename + ".ogg"]) 
         rospy.sleep(timeval)
         p.kill()
