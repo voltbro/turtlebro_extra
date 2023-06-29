@@ -345,8 +345,11 @@ class Utility():
     def call(self, name, button = 24):
         self.names_of_func_to_call[button] = name
     
-    def wait(self, time):
-        rospy.sleep(time)
+    def wait(self, time = 0):
+        if time == 0:
+            rospy.spin()
+        else:
+            rospy.sleep(time)
 
     def color(self, col):
         assert type(col) == str, "Имя цвета должно быть строкой"
@@ -362,11 +365,9 @@ class Utility():
         elif angle < 360:
             return self.scan.ranges[int(angle * self.step_of_angles)]
         elif angle == 360:
-            j = 0
             for i in range(self.len_of_scan_ranges):
-                k = int(j / self.step_of_angles)
-                j += 1
-                self.retscan[k] = i
+                k = int(i / self.step_of_angles)
+                self.retscan[k] = self.scan.ranges[k]
             return self.retscan
         else:
             return None
