@@ -26,9 +26,10 @@ class TurtleBro():
     поворачивать направо и налево - right(), left()
     ехать на определенные координаты (x,y) - goto(x,y)
     зажигать светодиоды - color()
-    снимать фото - photo()
+    записать фото - save_photo()
+    получить фото с камеры как массив cv2 a = tb.photo
     записывать звук - record()
-    измерять дистанцию - distance()
+    измерять дистанцию - get_distance()
     вызывать пользовательские функции при нажатии на кнопку - call()
     произносить фразы - say()
     находиться в режиме ожидания - wait()
@@ -82,8 +83,12 @@ class TurtleBro():
     def color(self, col):
         self.u.color(col)
     
-    def photo(self, name = "robophoto"):
-        self.u.photo(name)
+    def save_photo(self, name = "robophoto"):
+        self.u.photo(1, name)
+
+    @property
+    def photo(self):
+        return self.u.photo(0, "robophoto")
 
     def record(self, timeval = 3, filename = "turtlebro_sound"):
         self.u.record(timeval, filename)
@@ -91,7 +96,7 @@ class TurtleBro():
     def say(self, text = "Привет"):
         self.u.say(text)
     
-    def distance(self, angle = 0):
+    def get_distance(self, angle = 0):
         return self.u.distance(angle)
 
     def speed(self, value):
@@ -249,8 +254,12 @@ class TurtleNav():
     def color(self, col):
         self.u.color(col)
 
-    def photo(self, name = "robophoto"):
-        self.u.photo(name)
+    def save_photo(self, name = "robophoto"):
+        self.u.photo(1, name)
+
+    @property
+    def photo(self):
+        return self.u.photo(0, "robophoto")
 
     def record(self, timeval = 3, filename = "turtlebro_sound"):
         self.u.record(timeval, filename)
@@ -258,7 +267,7 @@ class TurtleNav():
     def say(self, text = "Привет"):
         self.u.say(text)
     
-    def distance(self, angle = 0):
+    def get_distance(self, angle = 0):
         return self.u.distance(angle)
 
     """
@@ -370,14 +379,17 @@ class Utility():
         else:
             return None
     
-    def photo(self, name = "robophoto"): 
+    def photo(self, save, name = "robophoto"): 
         assert type(name) == str, "Имя файла фото должно быть строкой"
         image_msg = rospy.wait_for_message("/front_camera/image_raw/compressed", CompressedImage)
         np_arr = np.frombuffer(image_msg.data, np.uint8)
         image_from_ros_camera = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
-        cv2.imwrite("/home/pi/"+ name +".jpg", image_from_ros_camera)
-        if DEBUG:
-            print("Фото записано в /home/pi/" + name +".jpg")
+        if save:
+            cv2.imwrite("/home/pi/"+ name +".jpg", image_from_ros_camera)
+            if DEBUG:
+                print("Фото записано в /home/pi/" + name +".jpg")
+        else:
+            return image_from_ros_camera
 
     def record(self, timeval, filename):
         assert timeval > 0 and (type(timeval) == float or type(timeval) == int), "Временной интервал должен быть положительным числом"
@@ -386,7 +398,11 @@ class Utility():
         p.kill()
 
     def say(self, text):
-        assert type(text) == str, "Текст должен быть строкой"
+        if type(text) != str:
+            try:
+                text = str(text)
+            except:
+                print("Текст должен быть строкой")
         self.speech_service.wait_for_service()
         self.speech_service.call(SpeechRequest(data = text))
 
