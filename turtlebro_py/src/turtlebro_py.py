@@ -87,6 +87,10 @@ class TurtleBro():
         self.u.photo(1, name)
 
     @property
+    def coords(self):
+        return self.odom.pose.pose.position.x, self.odom.pose.pose.position.y
+
+    @property
     def photo(self):
         return self.u.photo(0, "robophoto")
 
@@ -212,63 +216,11 @@ class TurtleBro():
         distance = math.sqrt((self.odom.pose.pose.position.x - x)**2 + (self.odom.pose.pose.position.y - y)**2)
         return distance
 
-class TurtleNav():
-    
+class TurtleNav(TurtleBro):
+
     def __init__(self):
-        self.u = Utility()
-        rospy.init_node("tb_nav_py")
-        self.odom = Odometry()
-        self.scan = LaserScan()
-        
-        self.names_of_func_to_call = {}
-
-        self.linear_x_val = 0.09
-        self.angular_z_val = 0.9
-
-        rospy.Subscriber("/odom", Odometry, self.__subscriber_odometry_cb)
-        self.vel_pub = rospy.Publisher('/cmd_vel', Twist, queue_size=1)
-
+        super().__init__()
         self.movebase_client = actionlib.SimpleActionClient('move_base', MoveBaseAction)
-
-    def forward(self, meters, speed_val = 0.05):
-        self.__move(meters, speed_val = 0.05)
-
-    def backward(self, meters, speed_val = 0.05):
-        self.__move(-meters, speed_val = 0.05)
-
-    def right(self, degrees, speed_val = 0.2):
-        self.__turn(-degrees, speed_val = 0.2) 
-
-    def left(self, degrees, speed_val = 0.2):
-        self.__turn(degrees, speed_val = 0.2)
-
-    def goto(self, x, y):
-        self.__goto(x,y)
-
-    def call(self, name, button = 24):
-        self.u.call(name, button)
-    
-    def wait(self, time):
-        self.u.wait(time)
-
-    def color(self, col):
-        self.u.color(col)
-
-    def save_photo(self, name = "robophoto"):
-        self.u.photo(1, name)
-
-    @property
-    def photo(self):
-        return self.u.photo(0, "robophoto")
-
-    def record(self, timeval = 3, filename = "turtlebro_sound"):
-        self.u.record(timeval, filename)
-        
-    def say(self, text = "Привет"):
-        self.u.say(text)
-    
-    def get_distance(self, angle = 0):
-        return self.u.distance(angle)
 
     """
     def speed(self, value): #TODO
@@ -280,9 +232,6 @@ class TurtleNav():
             self.linear_x_val = Utility.__clamp(0.01, value, 0.17)
             self.angular_z_val = Kp * self.linear_x_val
     """
-
-    def __subscriber_odometry_cb(self, msg):
-        self.odom = msg
     
     def __goal_message_assemble(self, x ,y, theta = 0):
         goal = MoveBaseGoal()
