@@ -25,11 +25,12 @@ class TurtleBro():
     назад - backward()
     поворачивать направо и налево - right(), left()
     ехать на определенные координаты (x,y) - goto(x,y)
+    получить текущие координаты x,y = tb.coords
     зажигать светодиоды - color()
     записать фото - save_photo()
     получить фото с камеры как массив cv2 a = tb.photo
     записывать звук - record()
-    измерять дистанцию - get_distance()
+    измерять дистанцию - distance()
     вызывать пользовательские функции при нажатии на кнопку - call()
     произносить фразы - say()
     находиться в режиме ожидания - wait()
@@ -100,7 +101,7 @@ class TurtleBro():
     def say(self, text = "Привет"):
         self.u.say(text)
     
-    def get_distance(self, angle = 0):
+    def distance(self, angle = 0):
         return self.u.distance(angle)
 
     def speed(self, value):
@@ -217,6 +218,23 @@ class TurtleBro():
         return distance
 
 class TurtleNav(TurtleBro):
+    """
+    Робот осуществляющий передвижения при помощи автономной навигации. 
+    Умеет:
+    ехать вперед - forward()
+    назад - backward()
+    поворачивать направо и налево - right(), left()
+    ехать на определенные координаты (x,y) - goto(x,y)
+    получить текущие координаты,    x,y = tb.coords
+    зажигать светодиоды - color()
+    записать фото - save_photo()
+    получить фото с камеры как массив cv2,    a = tb.photo
+    записывать звук - record()
+    измерять дистанцию - distance()
+    вызывать пользовательские функции при нажатии на кнопку - call()
+    произносить фразы - say()
+    находиться в режиме ожидания - wait()
+    """
 
     def __init__(self):
         super().__init__()
@@ -249,16 +267,25 @@ class TurtleNav(TurtleBro):
         return goal
 
     def __move(self, meters):
+        """
+        Переопределенная функция базового класса для езды по навигации
+        """
         goal = self.__goal_message_assemble(meters)
         self.movebase_client.wait_for_server()
         self.movebase_client.send_goal_and_wait(goal)
 
     def __turn(self, degrees):
+        """
+        Переопределенная функция базового класса для езды по навигации
+        """
         goal = self.__goal_message_assemble(0, theta = math.radians(degrees))
         self.movebase_client.wait_for_server()
         self.movebase_client.send_goal_and_wait(goal)
 
     def __goto(self, x, y):
+        """
+        Переопределенная функция базового класса для езды по навигации
+        """
         goal = self.__goal_message_assemble(x, y)
         self.movebase_client.wait_for_server()
         self.movebase_client.send_goal_and_wait(goal)
@@ -277,7 +304,7 @@ class Utility():
 
         odom_reset = rospy.ServiceProxy('reset', Empty)
         odom_reset.wait_for_service()
-        #odom_reset.call(Empty())                                                                       #TODO!!!!!!!
+        odom_reset.call()
 
         self.len_of_scan_ranges = len(self.scan.ranges)
         self.step_of_angles = self.len_of_scan_ranges / 360
@@ -315,9 +342,15 @@ class Utility():
         self.colorpub.publish(shade)
 
     def distance(self, angle):
-        assert type(angle) == (int or float), "Угол должен быть числом"
+        assert type(angle) == int or type(angle) == float, "Угол должен быть числом"
         if (angle == 0):
-            return self.scan.ranges[0]
+            if self.scan.ranges[0] != float("inf"):
+                return self.scan.ranges[0]
+            else:
+                for i in range(-3,3):
+                    if self.scan.ranges[i] != float("inf"):
+                        return self.scan.ranges[i]
+            return 0
         elif angle < 360:
             return self.scan.ranges[int(angle * self.step_of_angles)]
         elif angle == 360:
