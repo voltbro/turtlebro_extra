@@ -224,7 +224,7 @@ class TurtleNav(TurtleBro):
     ехать вперед - forward()
     назад - backward()
     поворачивать направо и налево - right(), left()
-    ехать на определенные координаты (x,y) - goto(x,y)
+    ехать на определенные координаты (x,y) и theta(опционально) угол поворота после того, как робот приедет на эти координаты - goto(x,y, theta)
     получить текущие координаты,    x,y = tb.coords
     зажигать светодиоды - color()
     записать фото - save_photo()
@@ -251,7 +251,10 @@ class TurtleNav(TurtleBro):
             self.angular_z_val = Kp * self.linear_x_val
     """
     
-    def __goal_message_assemble(self, x ,y, theta = 0):
+    def goto(self, x, y, theta = 0):
+        self.__goto(x, y, theta)
+
+    def __goal_message_assemble(self, x ,y, theta):
         goal = MoveBaseGoal()
         goal.target_pose.header.frame_id = "map"
         goal.target_pose.header.stamp = rospy.Time.now()
@@ -282,11 +285,11 @@ class TurtleNav(TurtleBro):
         self.movebase_client.wait_for_server()
         self.movebase_client.send_goal_and_wait(goal)
 
-    def __goto(self, x, y):
+    def __goto(self, x, y, theta):
         """
         Переопределенная функция базового класса для езды по навигации
         """
-        goal = self.__goal_message_assemble(x, y)
+        goal = self.__goal_message_assemble(x, y, theta)
         self.movebase_client.wait_for_server()
         self.movebase_client.send_goal_and_wait(goal)
 
