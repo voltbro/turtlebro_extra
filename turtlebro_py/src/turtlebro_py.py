@@ -69,11 +69,8 @@ class TurtleBro():
         assert degrees > 0, "Ошибка! Количество градусов должно быть положительным"
         self.__turn(degrees)
 
-    def goto(self, x, y):
-        heading = self.__get_turn_angle_to_point(x, y)
-        distance = self.__get_distance_to_point(x, y)
-        self.__turn(heading)
-        self.__move(distance)
+    def goto(self, x, y, theta = 0):
+        self.__goto(x, y, theta)
 
     def call(self, name, button = 24):
         self.u.call(name, button)
@@ -105,7 +102,7 @@ class TurtleBro():
         return self.u.distance(angle)
 
     def speed(self, value):
-        assert type(value) == str, "Скорость должно быть одним из слов: fastest, fast, normal, slow, slowest"
+        assert type(value) == str, "'Скорость' должно быть одним из слов: fastest, fast, normal, slow, slowest"
         Kp = 10
         speed_dict = {"fastest":0.17, "fast":0.12, "normal":0.09, "slow":0.04, "slowest":0.01}
         if type(value) == str:
@@ -141,6 +138,12 @@ class TurtleBro():
                     print("Проехал м.:", distance_passed)
                 return
             rospy.sleep(0.05)
+
+    def __goto(self, x, y, theta):
+        heading = self.__get_turn_angle_to_point(x, y)
+        distance = self.__get_distance_to_point(x, y)
+        self.__turn(heading)
+        self.__move(distance)
 
     def __turn(self, degrees):
         angle_delta = 0
@@ -221,10 +224,11 @@ class TurtleNav(TurtleBro):
     """
     Робот осуществляющий передвижения при помощи автономной навигации. 
     Умеет:
+    ехать на определенные координаты (x,y) и theta(опционально) угол поворота после того, как робот приедет на эти координаты - goto(x,y, theta)
+    Кроме того доступны все остальные команды простого робота:
     ехать вперед - forward()
     назад - backward()
     поворачивать направо и налево - right(), left()
-    ехать на определенные координаты (x,y) и theta(опционально) угол поворота после того, как робот приедет на эти координаты - goto(x,y, theta)
     получить текущие координаты,    x,y = tb.coords
     зажигать светодиоды - color()
     записать фото - save_photo()
@@ -240,20 +244,6 @@ class TurtleNav(TurtleBro):
         super().__init__()
         self.movebase_client = actionlib.SimpleActionClient('move_base', MoveBaseAction)
 
-    """
-    def speed(self, value): #TODO
-        Kp = 10
-        speed_dict = {"fastest":0.17, "fast":0.12, "normal":0.09, "slow":0.04, "slowest":0.01}
-        if type(value) == str:
-            self.linear_x_val = speed_dict[value]
-        else:
-            self.linear_x_val = Utility.__clamp(0.01, value, 0.17)
-            self.angular_z_val = Kp * self.linear_x_val
-    """
-    
-    def goto(self, x, y, theta = 0):
-        self.__goto(x, y, theta)
-
     def __goal_message_assemble(self, x ,y, theta):
         goal = MoveBaseGoal()
         goal.target_pose.header.frame_id = "map"
@@ -268,22 +258,6 @@ class TurtleNav(TurtleBro):
         goal.target_pose.pose.orientation.w = q[3]
 
         return goal
-
-    def __move(self, meters):
-        """
-        Переопределенная функция базового класса для езды по навигации
-        """
-        goal = self.__goal_message_assemble(meters)
-        self.movebase_client.wait_for_server()
-        self.movebase_client.send_goal_and_wait(goal)
-
-    def __turn(self, degrees):
-        """
-        Переопределенная функция базового класса для езды по навигации
-        """
-        goal = self.__goal_message_assemble(0, theta = math.radians(degrees))
-        self.movebase_client.wait_for_server()
-        self.movebase_client.send_goal_and_wait(goal)
 
     def __goto(self, x, y, theta):
         """
