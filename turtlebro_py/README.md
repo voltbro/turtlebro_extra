@@ -131,23 +131,24 @@ tb.call(myfunc1, 25) #при нажатии на кнопку 25, вызовет
 Пример кода для езды по квадрату длиной 20 см, со скоростью 0.1 м/с и смены цвета диодов на каждой стороне квадрата:
 
 ```
-import turtlebro_py as tb
+from turtlebro_py import TrutleBro
+tb = TurtleBro()
 
 tb.color("green")
-tb.move(0.2, 0.1)
-tb.turn(90)
+tb.forward(0.2, 0.1)
+tb.right(90)
 
 tb.color("red")
-tb.move(0.2, 0.1)
-tb.turn(90)
+tb.forward(0.2, 0.1)
+tb.right(90)
 
 tb.color("yellow")
-tb.move(0.2, 0.1)
-tb.turn(90)
+tb.forward(0.2, 0.1)
+tb.right(90)
 
 tb.color("blue")
-tb.move(0.2, 0.1)
-tb.turn(90)
+tb.forward(0.2, 0.1)
+tb.right(90)
 ```
 
 ### Использование TurtleNav
