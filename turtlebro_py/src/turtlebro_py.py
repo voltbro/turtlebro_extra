@@ -169,6 +169,7 @@ class TurtleBro():
                 return
             rospy.sleep(0.05)
     
+    #TODO to add flat range at the begining and the end of traj
     def __vel_x_move_value(self, speed, init_x, curent_x, aim_x):
         fixed_inklin = 0.01 #fixed distance (in m.) there acceleration/decceleration is performing
         if (curent_x == init_x):
@@ -334,7 +335,7 @@ class Utility():
         elif angle == 360:
             for i in range(self.len_of_scan_ranges):
                 k = int(i / self.step_of_angles)
-                self.retscan[k] = self.scan.ranges[k]
+                self.retscan[k] = self.scan.ranges[i]
             return self.retscan
         else:
             return None
