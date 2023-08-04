@@ -46,8 +46,6 @@ class TurtleBro():
              
         self.linear_x_val = 0.09
         self.angular_z_val = 0.9
-     
-        rospy.sleep(0.3)
 
     def __del__(self):
         self.vel_pub.publish(Twist())
@@ -116,8 +114,8 @@ class TurtleBro():
 
     def __move(self, meters):
         if DEBUG:
-            print("init x: ", self.odom.pose.pose.position.x, "y: ", self.odom.pose.pose.position.y)
-            print("meters: ", meters)
+            print("init x: ", round(self.odom.pose.pose.position.x, 2), "y: ", round(self.odom.pose.pose.position.y,2))
+            print("meters: ", round(meters,2))
         init_position = self.odom
         init_x = 0
         distance_passed = 0
@@ -135,7 +133,7 @@ class TurtleBro():
                 vel.linear.x = 0
                 self.vel_pub.publish(vel)
                 if DEBUG:
-                    print("Проехал м.:", distance_passed)
+                    print("Проехал м.:", round(distance_passed, 2))
                 return
             rospy.sleep(0.05)
 
@@ -148,10 +146,14 @@ class TurtleBro():
     def __turn(self, degrees):
         angle_delta = 0
         prev_pose = self.odom
-        init_angle = 0
+        current_q = [self.odom.pose.pose.orientation.x, self.odom.pose.pose.orientation.y,
+                self.odom.pose.pose.orientation.z, self.odom.pose.pose.orientation.w]
+        (_, _, init_angle) = euler_from_quaternion(current_q)
         vel = Twist()
-        epsilon = 0.03
+        epsilon = 0.01
         angle = math.radians(degrees)
+        print("градус на который надо повернуть: ", angle)
+        print("текущий градус: ", init_angle)
         while not rospy.is_shutdown():
             if (abs(angle_delta) + epsilon < abs(angle)):
                 if angle > 0:
@@ -165,7 +167,7 @@ class TurtleBro():
                 vel.angular.z = 0
                 self.vel_pub.publish(vel)
                 if DEBUG:
-                    print("Повернул град.:", math.degrees(angle_delta))
+                    print("Повернул град.:", round(math.degrees(angle_delta), 2))
                 return
             rospy.sleep(0.05)
     
@@ -177,7 +179,7 @@ class TurtleBro():
         elif (curent_x < init_x):
             return (init_x - curent_x) * speed
         elif (curent_x > aim_x):
-            return 0
+            return (aim_x - curent_x) * speed
         elif ((curent_x - init_x) < fixed_inklin):
             return ((curent_x - init_x) / fixed_inklin) * speed
         elif((aim_x - curent_x) < fixed_inklin):
@@ -193,7 +195,7 @@ class TurtleBro():
         elif (curent_x < init_x):
             return (init_x - curent_x) * speed * Kp
         elif (curent_x > aim_x):
-            return 0
+            return (aim_x - curent_x) * speed
         elif ((curent_x - init_x) < fixed_inklin):
             return ((curent_x - init_x) / fixed_inklin) * speed * Kp
         elif((aim_x - curent_x) < fixed_inklin):
@@ -279,11 +281,10 @@ class Utility():
         rospy.Subscriber("/buttons", Int16, self.__subscriber_buttons_cb, queue_size=1)
         self.colorpub = rospy.Publisher("/py_leds", Int16, queue_size=10)
         
-        rospy.sleep(0.3)
-
-        odom_reset = rospy.ServiceProxy('reset', Empty)
+        odom_reset = rospy.ServiceProxy('/reset', Empty)
         odom_reset.wait_for_service()
         odom_reset.call()
+        rospy.sleep(2)
 
         self.len_of_scan_ranges = len(self.scan.ranges)
         self.step_of_angles = self.len_of_scan_ranges / 360
@@ -314,14 +315,14 @@ class Utility():
             rospy.sleep(time)
 
     def color(self, col):
-        assert type(col) == str, "Имя цвета должно быть строкой"
+        assert type(col) == str, "Имя цвета должно быть: red, green, blue, yellow, white или off"
         rgb = {"red":1, "green":2, "blue":3, "yellow":4, "white":5, "off":6}
         shade = Int16()
         shade.data = int(rgb[col])
         self.colorpub.publish(shade)
 
     def distance(self, angle):
-        assert type(angle) == int or type(angle) == float, "Угол должен быть числом"
+        assert type(angle) == int or type(angle) == float, "Угол должен быть числом от 0 до 359"
         if (angle == 0):
             if self.scan.ranges[0] != float("inf"):
                 return self.scan.ranges[0]
