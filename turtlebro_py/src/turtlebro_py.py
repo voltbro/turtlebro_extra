@@ -40,12 +40,24 @@ class TurtleBro():
         rospy.init_node("tb_py")
         rospy.Subscriber("/odom", Odometry, self.__subscriber_odometry_cb)
         self.vel_pub = rospy.Publisher('/cmd_vel', Twist, queue_size=1)
-        self.odom = Odometry()
+        #self.odom = Odometry()
+
+        self.odom_reset = rospy.ServiceProxy('/reset', Empty)
+        self.odom_reset.wait_for_service()
+        self.odom_reset.call()
 
         self.u = Utility()
              
         self.linear_x_val = 0.09
         self.angular_z_val = 0.9
+
+        angle_q = [self.odom.pose.pose.orientation.x, self.odom.pose.pose.orientation.y, self.odom.pose.pose.orientation.z, self.odom.pose.pose.orientation.w]
+        (_, _, yaw) = euler_from_quaternion(angle_q)
+
+        while(abs(yaw) > 0.1):
+            angle_q = [self.odom.pose.pose.orientation.x, self.odom.pose.pose.orientation.y, self.odom.pose.pose.orientation.z, self.odom.pose.pose.orientation.w]
+            (_, _, yaw) = euler_from_quaternion(angle_q)
+            rospy.sleep(0.1)
 
     def __del__(self):
         self.vel_pub.publish(Twist())
@@ -111,6 +123,7 @@ class TurtleBro():
 
     def __subscriber_odometry_cb(self, msg):
         self.odom = msg
+        #print(self.odom.pose.pose.orientation.w)
 
     def __move(self, meters):
         if DEBUG:
@@ -214,7 +227,8 @@ class TurtleBro():
         return -yaw
 
     def __get_turn_angle_to_point(self, x, y):
-        (_, _, yaw) = euler_from_quaternion(self.odom.pose.pose.orientation)
+        angle_q = [self.odom.pose.pose.orientation.x, self.odom.pose.pose.orientation.y, self.odom.pose.pose.orientation.z, self.odom.pose.pose.orientation.w]
+        (_, _, yaw) = euler_from_quaternion(angle_q)
         heading = math.atan2(y,x)
         angle_to_turn = yaw - heading
         return angle_to_turn
@@ -280,17 +294,15 @@ class Utility():
         rospy.Subscriber("/scan", LaserScan, self.__subscriber_scan_cb)
         rospy.Subscriber("/buttons", Int16, self.__subscriber_buttons_cb, queue_size=1)
         self.colorpub = rospy.Publisher("/py_leds", Int16, queue_size=10)
-        
-        odom_reset = rospy.ServiceProxy('/reset', Empty)
-        odom_reset.wait_for_service()
-        odom_reset.call()
-        rospy.sleep(2)
+        self.speech_service = rospy.ServiceProxy('festival_speech', Speech)
+
+        while(len(self.scan.ranges)==1):
+            rospy.sleep(0.1)
 
         self.len_of_scan_ranges = len(self.scan.ranges)
         self.step_of_angles = self.len_of_scan_ranges / 360
         self.retscan = [0] * 360
-        self.speech_service = rospy.ServiceProxy('festival_speech', Speech)
-    
+
     def __del__(self):
         self.color("blue")
 
