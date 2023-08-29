@@ -40,16 +40,16 @@ class TurtleBro():
         rospy.init_node("tb_py")
         rospy.Subscriber("/odom", Odometry, self.__subscriber_odometry_cb)
         self.vel_pub = rospy.Publisher('/cmd_vel', Twist, queue_size=1)
-        #self.odom = Odometry()
-
-        self.odom_reset = rospy.ServiceProxy('/reset', Empty)
-        self.odom_reset.wait_for_service()
-        self.odom_reset.call()
+        self.odom = Odometry()
+        self.init_position_on_start = Odometry()
+        self.odom_has_started = False
 
         self.u = Utility()
              
         self.linear_x_val = 0.09
         self.angular_z_val = 0.9
+
+        self.wait_for_odom_to_start()
 
         angle_q = [self.odom.pose.pose.orientation.x, self.odom.pose.pose.orientation.y, self.odom.pose.pose.orientation.z, self.odom.pose.pose.orientation.w]
         (_, _, yaw) = euler_from_quaternion(angle_q)
@@ -62,6 +62,11 @@ class TurtleBro():
     def __del__(self):
         self.vel_pub.publish(Twist())
         print("Done")
+    
+    def wait_for_odom_to_start(self):
+        while not self.odom_has_started:
+            rospy.sleep(0.05)
+        self.init_position_on_start = self.odom
 
     def forward(self, meters):
         assert meters > 0, "Ошибка! Количество метров должно быть положительным"
@@ -80,6 +85,8 @@ class TurtleBro():
         self.__turn(degrees)
 
     def goto(self, x, y, theta = 0):
+        x = self.init_position_on_start.pose.pose.position.x + x
+        y = self.init_position_on_start.pose.pose.position.y + y
         self.__goto(x, y, theta)
 
     def call(self, name, button = 24):
@@ -123,7 +130,8 @@ class TurtleBro():
 
     def __subscriber_odometry_cb(self, msg):
         self.odom = msg
-        #print(self.odom.pose.pose.orientation.w)
+        if not self.odom_has_started:
+            self.odom_has_started = True
 
     def __move(self, meters):
         if DEBUG:
@@ -132,7 +140,7 @@ class TurtleBro():
         init_position = self.odom
         init_x = 0
         distance_passed = 0
-        epsilon = 0.005
+        epsilon = 0.005 #distance to goal where 0 speed performing no matter of deviation
         vel = Twist() 
         while not rospy.is_shutdown():
             distance_passed = math.sqrt((self.odom.pose.pose.position.x - init_position.pose.pose.position.x)**2 + (self.odom.pose.pose.position.y - init_position.pose.pose.position.y)**2)
@@ -148,7 +156,7 @@ class TurtleBro():
                 if DEBUG:
                     print("Проехал м.:", round(distance_passed, 2))
                 return
-            rospy.sleep(0.05)
+            rospy.sleep(0.03)
 
     def __goto(self, x, y, theta):
         heading = self.__get_turn_angle_to_point(x, y)
@@ -159,11 +167,11 @@ class TurtleBro():
     def __turn(self, degrees):
         angle_delta = 0
         prev_pose = self.odom
-        current_q = [self.odom.pose.pose.orientation.x, self.odom.pose.pose.orientation.y,
+        initial_q = [self.odom.pose.pose.orientation.x, self.odom.pose.pose.orientation.y,
                 self.odom.pose.pose.orientation.z, self.odom.pose.pose.orientation.w]
-        (_, _, init_angle) = euler_from_quaternion(current_q)
+        (_, _, init_angle) = euler_from_quaternion(initial_q)
         vel = Twist()
-        epsilon = 0.01
+        epsilon = 0.01 #angle to goal where 0 speed performing no matter of deviation
         angle = math.radians(degrees)
         print("градус на который надо повернуть: ", angle)
         print("текущий градус: ", init_angle)
@@ -182,37 +190,34 @@ class TurtleBro():
                 if DEBUG:
                     print("Повернул град.:", round(math.degrees(angle_delta), 2))
                 return
-            rospy.sleep(0.05)
+            rospy.sleep(0.03)
     
     #TODO to add flat range at the begining and the end of traj
     def __vel_x_move_value(self, speed, init_x, curent_x, aim_x):
         fixed_inklin = 0.01 #fixed distance (in m.) there acceleration/decceleration is performing
-        if (curent_x == init_x):
-            return 0.01
-        elif (curent_x < init_x):
-            return (init_x - curent_x) * speed
-        elif (curent_x > aim_x):
-            return (aim_x - curent_x) * speed
-        elif ((curent_x - init_x) < fixed_inklin):
-            return ((curent_x - init_x) / fixed_inklin) * speed
-        elif((aim_x - curent_x) < fixed_inklin):
+        if (curent_x <= init_x): #slow flat start
+            return (0.1 * speed)
+        elif ((curent_x - init_x) < fixed_inklin): #just a bit slow accel no need to increase accel
+            return (0.3 * speed)
+        elif((aim_x - curent_x) < fixed_inklin): 
+            return (0.3 * speed)
+        elif(curent_x > aim_x): #backward in case of overshoot
             return (aim_x - curent_x) * speed
         else:
             return speed
         
     def __vel_z_turn_value(self, speed, init_x, curent_x, aim_x):
         fixed_inklin = 0.08 #fixed angle (in deg.) there acceleration/decceleration is performing
-        Kp = 2
-        if (curent_x == init_x):
-            return 0.01
-        elif (curent_x < init_x):
-            return (init_x - curent_x) * speed * Kp
+        if (curent_x <= init_x):
+            return (0.1 * speed) 
         elif (curent_x > aim_x):
             return (aim_x - curent_x) * speed
         elif ((curent_x - init_x) < fixed_inklin):
-            return ((curent_x - init_x) / fixed_inklin) * speed * Kp
+            return 0.3 * speed
         elif((aim_x - curent_x) < fixed_inklin):
-            return (aim_x - curent_x) * speed * Kp
+            return 0.3 * speed
+        elif(curent_x > aim_x): #backward in case of overshoot
+            return (aim_x - curent_x) * speed
         else:
             return speed
 
@@ -297,7 +302,7 @@ class Utility():
         self.speech_service = rospy.ServiceProxy('festival_speech', Speech)
 
         while(len(self.scan.ranges)==1):
-            rospy.sleep(0.1)
+            rospy.sleep(0.05)
 
         self.len_of_scan_ranges = len(self.scan.ranges)
         self.step_of_angles = self.len_of_scan_ranges / 360
