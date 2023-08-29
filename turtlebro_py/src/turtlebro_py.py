@@ -51,14 +51,6 @@ class TurtleBro():
 
         self.wait_for_odom_to_start()
 
-        angle_q = [self.odom.pose.pose.orientation.x, self.odom.pose.pose.orientation.y, self.odom.pose.pose.orientation.z, self.odom.pose.pose.orientation.w]
-        (_, _, yaw) = euler_from_quaternion(angle_q)
-
-        while(abs(yaw) > 0.1):
-            angle_q = [self.odom.pose.pose.orientation.x, self.odom.pose.pose.orientation.y, self.odom.pose.pose.orientation.z, self.odom.pose.pose.orientation.w]
-            (_, _, yaw) = euler_from_quaternion(angle_q)
-            rospy.sleep(0.1)
-
     def __del__(self):
         self.vel_pub.publish(Twist())
         print("Done")
