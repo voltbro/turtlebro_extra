@@ -97,9 +97,11 @@ class TurtleBro():
     def coords(self):
         return self.odom.pose.pose.position.x, self.odom.pose.pose.position.y
 
-    @property
-    def photo(self):
+    def get_photo(self):
         return self.u.photo(0, "robophoto")
+
+    def save_photo(self, name = "robophoto"):
+        return self.u.photo(1, name)
 
     def record(self, timeval = 3, filename = "turtlebro_sound"):
         self.u.record(timeval, filename)
@@ -350,17 +352,20 @@ class Utility():
         else:
             return None
     
-    def photo(self, save, name = "robophoto"): 
+    def photo(self, save, name): 
         assert type(name) == str, "Имя файла фото должно быть строкой"
-        image_msg = rospy.wait_for_message("/front_camera/image_raw/compressed", CompressedImage)
-        np_arr = np.frombuffer(image_msg.data, np.uint8)
-        image_from_ros_camera = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
-        if save:
-            cv2.imwrite("/home/pi/"+ name +".jpg", image_from_ros_camera)
-            if DEBUG:
-                print("Фото записано в /home/pi/" + name +".jpg")
-        else:
-            return image_from_ros_camera
+        try:
+            image_msg = rospy.wait_for_message("/front_camera/image_raw/compressed", CompressedImage, timeout=3)
+            np_arr = np.frombuffer(image_msg.data, np.uint8)
+            image_from_ros_camera = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
+            if save:
+                cv2.imwrite("/home/pi/"+ name +".jpg", image_from_ros_camera)
+                if DEBUG:
+                    print("Фото записано в /home/pi/" + name +".jpg")
+            else:
+                return image_from_ros_camera
+        except Exception as e:
+            print(e)
 
     def record(self, timeval, filename):
         assert timeval > 0 and (type(timeval) == float or type(timeval) == int), "Временной интервал должен быть положительным числом"
