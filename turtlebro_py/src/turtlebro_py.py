@@ -138,11 +138,11 @@ class TurtleBro():
         vel = Twist() 
         while not rospy.is_shutdown():
             distance_passed = math.sqrt((self.odom.pose.pose.position.x - init_position.pose.pose.position.x)**2 + (self.odom.pose.pose.position.y - init_position.pose.pose.position.y)**2)
-            if (distance_passed + epsilon < abs(meters)):
+            if (distance_passed < abs(meters)):
                 if meters > 0:
                     vel.linear.x = self.__vel_x_move_value(self.linear_x_val, init_x, distance_passed, meters)
                 else:
-                    vel.linear.x = - self.__vel_x_move_value(self.linear_x_val, init_x, distance_passed, abs(meters))
+                    vel.linear.x = - self.__vel_x_move_value(self.linear_x_val, abs(meters), distance_passed, init_x )
                 self.vel_pub.publish(vel)
             else:
                 vel.linear.x = 0
@@ -165,18 +165,18 @@ class TurtleBro():
                 self.odom.pose.pose.orientation.z, self.odom.pose.pose.orientation.w]
         (_, _, init_angle) = euler_from_quaternion(initial_q)
         vel = Twist()
-        epsilon = 0.01 #angle to goal where 0 speed performing no matter of deviation
         angle = math.radians(degrees)
         print("градус на который надо повернуть: ", angle)
         print("текущий градус: ", init_angle)
         while not rospy.is_shutdown():
-            if (abs(angle_delta) + epsilon < abs(angle)):
+            angle_delta += self.__get_angle_diff(prev_pose.pose.pose.orientation, self.odom.pose.pose.orientation)
+            if (abs(angle_delta) < abs(angle)):
                 if angle > 0:
-                    vel.angular.z = self.__vel_z_turn_value(self.angular_z_val, init_angle, angle_delta, angle)
+                    vel.angular.z = self.__vel_z_turn_value(self.angular_z_val, 0, angle_delta, angle)
                 else:
-                    vel.angular.z = -self.__vel_z_turn_value(self.angular_z_val, init_angle, abs(angle_delta), abs(angle))
-                angle_delta += self.__get_angle_diff(prev_pose.pose.pose.orientation, self.odom.pose.pose.orientation)
+                    vel.angular.z = -self.__vel_z_turn_value(self.angular_z_val, 0, abs(angle_delta), abs(angle))
                 self.vel_pub.publish(vel)
+                print(vel.angular.z)
                 prev_pose = self.odom
             else:
                 vel.angular.z = 0
@@ -184,34 +184,23 @@ class TurtleBro():
                 if DEBUG:
                     print("Повернул град.:", round(math.degrees(angle_delta), 2))
                 return
-            rospy.sleep(0.03)
-    
-    #TODO to add flat range at the begining and the end of traj
+            rospy.sleep(0.05)
+
     def __vel_x_move_value(self, speed, init_x, curent_x, aim_x):
-        fixed_inklin = 0.01 #fixed distance (in m.) there acceleration/decceleration is performing
-        if (curent_x <= init_x): #slow flat start
-            return (0.1 * speed)
-        elif ((curent_x - init_x) < fixed_inklin): #just a bit slow accel no need to increase accel
-            return (0.3 * speed)
-        elif((aim_x - curent_x) < fixed_inklin): 
-            return (0.3 * speed)
-        elif(curent_x > aim_x): #backward in case of overshoot
-            return (aim_x - curent_x) * speed
+        zero_deccel = 0.01
+        if abs(curent_x - init_x) < zero_deccel:
+            return (0.5 * speed)
+        elif abs(curent_x - aim_x) < zero_deccel:
+            return (0.5 * speed)
         else:
             return speed
         
     def __vel_z_turn_value(self, speed, init_x, curent_x, aim_x):
-        fixed_inklin = 0.08 #fixed angle (in deg.) there acceleration/decceleration is performing
-        if (curent_x <= init_x):
-            return (0.1 * speed) 
-        elif (curent_x > aim_x):
-            return (aim_x - curent_x) * speed
-        elif ((curent_x - init_x) < fixed_inklin):
-            return 0.3 * speed
-        elif((aim_x - curent_x) < fixed_inklin):
-            return 0.3 * speed
-        elif(curent_x > aim_x): #backward in case of overshoot
-            return (aim_x - curent_x) * speed
+        zero_deccel = 0.1
+        if abs(curent_x - init_x) < zero_deccel:
+            return (0.3 * speed)
+        elif abs(curent_x - aim_x) < zero_deccel:
+            return (0.3 * speed)
         else:
             return speed
 
