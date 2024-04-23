@@ -33,6 +33,7 @@ class TurtleBro():
     измерять дистанцию - distance()
     вызывать пользовательские функции при нажатии на кнопку - call()
     произносить фразы - say()
+    проигрывать звуковые файлы - play()
     находиться в режиме ожидания - wait()
     """
 
@@ -108,6 +109,9 @@ class TurtleBro():
 
     def say(self, text = "Привет"):
         self.u.say(text)
+
+    def play(self, filename):
+        self.u.play(filename)
     
     def distance(self, angle = 0):
         return self.u.distance(angle)
@@ -248,6 +252,7 @@ class TurtleNav(TurtleBro):
     измерять дистанцию - distance()
     вызывать пользовательские функции при нажатии на кнопку - call()
     произносить фразы - say()
+    проигрывать звуковые файлы - play() 
     находиться в режиме ожидания - wait()
     """
 
@@ -375,6 +380,10 @@ class Utility():
                 print("Текст должен быть строкой")
         self.speech_service.wait_for_service()
         self.speech_service.call(SpeechRequest(data = text))
+    
+    def play(self, filename):
+        assert filename, "Файл для воспроизведения не задан"
+        p = subprocess.Popen(["aplay", "/home/pi/" + filename]) 
 
     def __clamp(min_val, value, max_val):
         return max(min_val, min(value, max_val))
