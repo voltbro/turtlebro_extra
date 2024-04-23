@@ -284,8 +284,8 @@ class Utility():
         self.colorpub = rospy.Publisher("/py_leds", Int16, queue_size=10)
         self.speech_service = rospy.ServiceProxy('festival_speech', Speech)
 
-        while(len(self.scan.ranges)==1):
-            rospy.sleep(0.05)
+        while(len(self.scan.ranges)<=1):
+            rospy.sleep(0.01)
 
         self.len_of_scan_ranges = len(self.scan.ranges)
         self.step_of_angles = self.len_of_scan_ranges / 360
