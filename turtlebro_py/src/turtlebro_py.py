@@ -96,7 +96,11 @@ class TurtleBro():
 
     @property
     def coords(self):
-        return self.odom.pose.pose.position.x, self.odom.pose.pose.position.y
+        angle_q = [self.odom.pose.pose.orientation.x, self.odom.pose.pose.orientation.y, self.odom.pose.pose.orientation.z, self.odom.pose.pose.orientation.w]
+        (_, _, theta) = euler_from_quaternion(angle_q)
+        x = self.odom.pose.pose.position.x 
+        y = self.odom.pose.pose.position.y
+        return x, y, theta
 
     def get_photo(self):
         return self.u.photo(0, "robophoto")
@@ -300,6 +304,7 @@ class Utility():
         self.len_of_scan_ranges = len(self.scan.ranges)
         self.step_of_angles = self.len_of_scan_ranges / 360
         self.retscan = [0] * 360
+        print("Поехали!!!")
 
     def __del__(self):
         self.color("blue")
