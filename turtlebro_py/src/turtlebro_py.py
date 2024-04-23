@@ -17,7 +17,7 @@ from std_srvs.srv import Empty
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 
 
-DEBUG = 1
+DEBUG = 0
 
 class TurtleBro():
     """
@@ -155,7 +155,10 @@ class TurtleBro():
     def __goto(self, x, y, theta):
         heading = self.__get_turn_angle_to_point(x, y)
         distance = self.__get_distance_to_point(x, y)
-        self.__turn(heading)
+        if DEBUG:
+            print("поворот на:", heading)
+            print("вперед на:", distance)
+        self.__turn(math.degrees(heading))
         self.__move(distance)
 
     def __turn(self, degrees):
@@ -166,8 +169,9 @@ class TurtleBro():
         (_, _, init_angle) = euler_from_quaternion(initial_q)
         vel = Twist()
         angle = math.radians(degrees)
-        print("градус на который надо повернуть: ", angle)
-        print("текущий градус: ", init_angle)
+        if DEBUG:
+            print("градус на который надо повернуть: ", angle)
+            print("текущий градус: ", init_angle)
         while not rospy.is_shutdown():
             angle_delta += self.__get_angle_diff(prev_pose.pose.pose.orientation, self.odom.pose.pose.orientation)
             if (abs(angle_delta) < abs(angle)):
@@ -176,7 +180,8 @@ class TurtleBro():
                 else:
                     vel.angular.z = -self.__vel_z_turn_value(self.angular_z_val, 0, abs(angle_delta), abs(angle))
                 self.vel_pub.publish(vel)
-                print(vel.angular.z)
+                if DEBUG:
+                    print(vel.angular.z)
                 prev_pose = self.odom
             else:
                 vel.angular.z = 0
@@ -217,13 +222,13 @@ class TurtleBro():
     def __get_turn_angle_to_point(self, x, y):
         angle_q = [self.odom.pose.pose.orientation.x, self.odom.pose.pose.orientation.y, self.odom.pose.pose.orientation.z, self.odom.pose.pose.orientation.w]
         (_, _, yaw) = euler_from_quaternion(angle_q)
-        heading = math.atan2(y,x)
+        heading = -math.atan2(y,x)
         angle_to_turn = yaw - heading
         return angle_to_turn
 
     def __get_distance_to_point(self, x, y):
-        distance = math.sqrt((self.odom.pose.pose.position.x - x)**2 + (self.odom.pose.pose.position.y - y)**2)
-        return distance
+        return math.sqrt((self.odom.pose.pose.position.x - x)**2 + (self.odom.pose.pose.position.y - y)**2)
+         
 
 class TurtleNav(TurtleBro):
     """
@@ -356,9 +361,9 @@ class Utility():
         except Exception as e:
             print(e)
 
-    def record(self, timeval, filename):
+    def record(self, timeval, filename, format = ".wav"):
         assert timeval > 0 and (type(timeval) == float or type(timeval) == int), "Временной интервал должен быть положительным числом"
-        p = subprocess.Popen(["arecord", "-D", "hw:1,0", "-f", "S16_LE", "-r 48000", "/home/pi/" + filename + ".ogg"]) 
+        p = subprocess.Popen(["arecord", "-D", "hw:1,0", "-f", "S16_LE", "-r 48000", "/home/pi/" + filename + format]) 
         rospy.sleep(timeval)
         p.kill()
 
