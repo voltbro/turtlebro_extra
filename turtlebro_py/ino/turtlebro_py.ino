@@ -83,10 +83,8 @@ void setup() {
   FastLED.addLeds<NEOPIXEL, DATA_PIN>(leds, NUM_LEDS);
   FastLED.setBrightness( BRIGHTNESS );
   pinMode(13, OUTPUT);
-  pinMode(22, INPUT);
   pinMode(23, INPUT);
   pinMode(24, INPUT);
-  pinMode(25, INPUT);
   nh.initNode();
   nh.advertise(pub);
   nh.subscribe(sub);
@@ -94,10 +92,6 @@ void setup() {
 
 void loop() {
   button_num.data = 0;
-  if(digitalRead(22))
-  {
-    button_num.data = 22;
-  }
   if(digitalRead(23))
   {
     button_num.data = 23;
@@ -105,10 +99,6 @@ void loop() {
   if(digitalRead(24))
   {
     button_num.data = 24;
-  }
-  if(digitalRead(25))
-  {
-    button_num.data = 25;
   }
   pub.publish(&button_num);
   nh.spinOnce();
