@@ -34,7 +34,7 @@ class TurtleBro():
     получить фото с камеры как массив cv2 a = tb.photo
     записывать звук - record()
     измерять дистанцию - distance()
-    вызывать пользовательские функции при нажатии на кнопку - call()
+    вызывать пользовательские функции при нажатии на кнопку - call(имя_пользовательской_функции, аргументы_пользовательской_функции - необязательно)
     произносить фразы - say()
     проигрывать звуковые файлы - play()
     находиться в режиме ожидания - wait()
@@ -85,8 +85,8 @@ class TurtleBro():
         y = self.init_position_on_start.pose.pose.position.y + y
         self.__goto(x, y, theta)
 
-    def call(self, name, button = 24):
-        self.u.call(name, button)
+    def call(self, name, button = 24, *args, **kwargs):
+        self.u.call(name, button, *args, **kwargs)
     
     def wait(self, time):
         self.u.wait(time)
@@ -298,6 +298,8 @@ class Utility():
     def __init__(self):
         self.scan = LaserScan()
         self.names_of_func_to_call = {}
+        self.args_of_func_to_call = {}
+        self.kwargs_of_func_to_call = {}
         rospy.Subscriber("/scan", LaserScan, self.__subscriber_scan_cb)
         rospy.Subscriber("/buttons", Int16, self.__subscriber_buttons_cb, queue_size=1)
         self.colorpub = rospy.Publisher("/py_leds", Int16, queue_size=10)
@@ -320,13 +322,15 @@ class Utility():
     def __subscriber_buttons_cb(self, msg):
         try:
             if(msg.data):
-                self.names_of_func_to_call[msg.data]()
+                self.names_of_func_to_call[msg.data](*self.args_of_func_to_call[msg.data], **self.kwargs_of_func_to_call[msg.data])
                 rospy.sleep(0.5) #workaround for non lib functions
         except BaseException:
             pass
 
-    def call(self, name, button = 24):
+    def call(self, name, button = 24, *args, **kwargs):
         self.names_of_func_to_call[button] = name
+        self.args_of_func_to_call[button] = args
+        self.kwargs_of_func_to_call[button] = kwargs
     
     def wait(self, time = 0):
         if time == 0:
