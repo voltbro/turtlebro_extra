@@ -28,7 +28,7 @@ class TurtleBro():
     поворачивать с заданной скоростью в градусах/сек - angular_speed(скорость) #положительная против часовой стрелки, отрицательная по часовой стрелке - правило правой руки
     задавать скорость езды по прямой и поворота - speed("скорость") # в функцию должно передаваться одно из слов "fastest", "fast", "normal", "slow", "slowest"
     ехать на определенные координаты (x,y) - goto(x,y)
-    получить текущие координаты x,y = tb.coords
+    получить текущие координаты и угол поворота относительно старта x,y,theta = tb.coords
     зажигать светодиоды - color("цвет")   "цвет" может быть = "red", "green", "blue", "yellow", "white", "off"
     записать фото - save_photo()
     получить фото с камеры как массив cv2 a = tb.photo
@@ -103,6 +103,7 @@ class TurtleBro():
         (_, _, theta) = euler_from_quaternion(angle_q)
         x = self.odom.pose.pose.position.x 
         y = self.odom.pose.pose.position.y
+        theta = math.degrees(theta)
         return x, y, theta
 
     def get_photo(self):
