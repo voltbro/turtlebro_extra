@@ -81,8 +81,8 @@ class TurtleBro():
         self.__turn(degrees)
 
     def goto(self, x, y, theta = 0):
-        x = self.init_position_on_start.pose.pose.position.x + x
-        y = self.init_position_on_start.pose.pose.position.y + y
+        x = self.odom.pose.pose.position.x + x
+        y = self.odom.pose.pose.position.y + y
         self.__goto(x, y, theta)
 
     def call(self, name, button = 24, *args, **kwargs):
