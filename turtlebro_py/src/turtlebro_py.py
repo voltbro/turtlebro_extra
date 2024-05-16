@@ -7,7 +7,7 @@ import numpy as np
 
 from tf.transformations import quaternion_multiply, quaternion_inverse, euler_from_quaternion, quaternion_from_euler
 
-from std_msgs.msg import Int16
+from std_msgs.msg import Int16, Float32MultiArray
 from geometry_msgs.msg import Twist, Point, Quaternion
 from nav_msgs.msg import Odometry
 from sensor_msgs.msg import LaserScan, CompressedImage
@@ -27,6 +27,7 @@ class TurtleBro():
     ехать по прямой с заданной скоростью в м/с - linear_speed(скорость) #положительная вперед, отрицательная назад
     поворачивать с заданной скоростью в градусах/сек - angular_speed(скорость) #положительная против часовой стрелки, отрицательная по часовой стрелке - правило правой руки
     задавать скорость езды по прямой и поворота - speed("скорость") # в функцию должно передаваться одно из слов "fastest", "fast", "normal", "slow", "slowest"
+    полчуать текущие координаты tb.coords
     ехать на определенные координаты (x,y) - goto(x,y)
     получить текущие координаты и угол поворота относительно старта x,y,theta = tb.coords
     зажигать светодиоды - color("цвет")   "цвет" может быть = "red", "green", "blue", "yellow", "white", "off"
@@ -38,13 +39,16 @@ class TurtleBro():
     произносить фразы - say()
     проигрывать звуковые файлы - play()
     находиться в режиме ожидания - wait()
+    получать данные с тепловизора tb.thermo_pixels #массив 64-х значений температуры полученных с тепловизора
     """
 
     def __init__(self):
         rospy.init_node("tb_py")
         rospy.Subscriber("/odom", Odometry, self.__subscriber_odometry_cb)
+        rospy.Subscriber("/thermovisor", Float32MultiArray, self.__subscriber_thermo_cb)
         self.vel_pub = rospy.Publisher('/cmd_vel', Twist, queue_size=1)
         self.odom = Odometry()
+        self.thermo = Float32MultiArray()
         self.init_position_on_start = Odometry()
         self.odom_has_started = False
 
@@ -104,6 +108,11 @@ class TurtleBro():
         theta = math.degrees(theta)
         return x, y, theta
 
+    @property
+    def thermo_pixels(self):
+        thermo_arr = self.thermo.data
+        return thermo_arr
+
     def get_photo(self):
         return self.u.photo(0, "robophoto")
 
@@ -136,6 +145,9 @@ class TurtleBro():
         self.odom = msg
         if not self.odom_has_started:
             self.odom_has_started = True
+
+    def __subscriber_thermo_cb(self, msg):
+        self.thermo = msg
 
     def __move(self, meters):
         if DEBUG:
