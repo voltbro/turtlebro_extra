@@ -195,12 +195,15 @@ include_directories(
 install(PROGRAMS
    src/point_aruco.py
    src/point_speech.py
+   src/heat_speaker.py
+   src/aruco_speech.py
    DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
 install(DIRECTORY 
   launch
   data
+  arduino
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
 )
 
