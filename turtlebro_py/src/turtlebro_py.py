@@ -185,45 +185,63 @@ class TurtleBro():
         self.__move(distance)
 
     def __turn(self, degrees):
-        turn_deccel = 0.1
-        angle_delta = 0
-        prev_pose = self.odom
-        initial_q = [self.odom.pose.pose.orientation.x, self.odom.pose.pose.orientation.y,
-                self.odom.pose.pose.orientation.z, self.odom.pose.pose.orientation.w]
-        (_, _, init_angle) = euler_from_quaternion(initial_q)
+        turn_deccel = 0.2
+        init_pose = self.odom
+        init_angle = self.__get_curent_angle(self.odom.pose.pose.orientation)
+        prev_angle = init_angle
+
+        target_angle = math.radians(degrees) + init_angle
+        revolitions = target_angle % math.pi
+
+        turn_right = False
+        turn_left = False
+        
+        travel = 0
+        
+        if (degrees > 0):
+            turn_left = True
+        elif(degreed < 0):  
+            turn_right = True
+        else:
+            return
+
         vel = Twist()
-        angle = math.radians(degrees)
+
         if DEBUG:
-            print("градус на который надо повернуть: ", angle)
-            print("текущий градус: ", init_angle)
+            print("градус на который надо повернуть: ",  math.degrees(target_angle))
+            print("текущий градус: ", math.degrees(init_angle))
 
-        print(self.__get_curent_angle(self.odom.pose.pose.orientation))        
+        #print(math.degrees(self.__get_curent_angle(self.odom.pose.pose.orientation)))        
 
-        # while not rospy.is_shutdown():
-        #     angle_delta += self.__get_angle_diff(prev_pose.pose.pose.orientation, self.odom.pose.pose.orientation)
-        #     if (abs(angle_delta) < abs(angle)):
-        #         if angle > 0:
-        #             vel.angular.z = self.__vel_move_value(self.angular_z_val, 0, angle_delta, angle, turn_deccel)
-        #         else:
-        #             vel.angular.z = -self.__vel_move_value(self.angular_z_val, 0, abs(angle_delta), abs(angle), turn_deccel)
-        #         self.vel_pub.publish(vel)
-        #         if DEBUG:
-        #             print(vel.angular.z) 
-        #         prev_pose = self.odom
-        #     else:
-        #         vel.angular.z = 0
-        #         self.vel_pub.publish(vel)
-        #         if DEBUG:
-        #             print("Повернул град.:", round(math.degrees(angle_delta), 2))
-        #         return
-        #     rospy.sleep(0.05)
+        while not rospy.is_shutdown():
+            curent_angle = self.__get_curent_angle(self.odom.pose.pose.orientation)
+            if curent_angle - prev_angle > 1: #переход через 180
+                travel += 1
+            elif curent_angle - prev_angle < -1:
+                travel -= 1
+            if (abs(curent_angle) < abs(target_angle)):
+                if turn_left:
+                    vel.angular.z = self.__vel_move_value(self.angular_z_val, init_angle, curent_angle, target_angle, turn_deccel)
+                else:
+                    vel.angular.z = -self.__vel_move_value(self.angular_z_val, init_angle , abs(curent_angle), abs(target_angle), turn_deccel)
+                self.vel_pub.publish(vel)
+                if DEBUG:
+                    print(vel.angular.z)
+                prev_angle = self.odom
+            else:
+                vel.angular.z = 0
+                self.vel_pub.publish(vel)
+                if DEBUG:
+                    print("Повернул град.:", math.degrees(curent_angle))
+                return
+            rospy.sleep(0.05)
+
 
     def __vel_move_value(self, speed, init_x, curent_x, aim_x, zero_deccel):
-        zero_deccel = 0.01
         if abs(curent_x - init_x) < zero_deccel:
             return (0.5 * speed)
         elif abs(curent_x - aim_x) < zero_deccel:
-            return (0.5 * speed)
+            return abs(curent_x - aim_x) * speed
         else:
             return speed
 
