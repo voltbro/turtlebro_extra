@@ -10,10 +10,11 @@ project(turtlebro_actions)
 find_package(catkin REQUIRED COMPONENTS
   actionlib
   message_runtime
+  message_generation  
   roscpp
   rospy
   actionlib_msgs
-  message_generation
+  sensor_msgs
 )
 
 ## System dependencies are found with CMake's conventions
@@ -63,6 +64,12 @@ find_package(catkin REQUIRED COMPONENTS
 #   Service2.srv
 # )
 
+## Generate services in the 'srv' folder
+add_service_files(
+   FILES
+   Photo.srv
+ )
+
 ## Generate actions in the 'action' folder
 # add_action_files(
 #   FILES
@@ -84,7 +91,7 @@ add_action_files(
 # )
 
 generate_messages(
-  DEPENDENCIES actionlib_msgs std_msgs
+  DEPENDENCIES actionlib_msgs sensor_msgs std_msgs
 )
 
 ################################################
@@ -220,6 +227,7 @@ install(PROGRAMS
   src/commands_controller.py
   src/video_client.py
   src/servo_client.py
+  src/photo_service.py  
   src/radio.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )

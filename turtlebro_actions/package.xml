@@ -60,8 +60,12 @@
   <exec_depend>message_runtime</exec_depend>
   <exec_depend>roscpp</exec_depend>
   <exec_depend>rospy</exec_depend>
+
   <exec_depend>actionlib_msgs</exec_depend>
   <build_depend>actionlib_msgs</build_depend>
+  
+  <exec_depend>sensor_msgs</exec_depend>
+  <build_depend>sensor_msgs</build_depend>
 
 
   <!-- The export tag contains other, unspecified, tags -->
