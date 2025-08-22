@@ -16,60 +16,47 @@ from turtlebro_speech.srv import Speech, SpeechResponse, SpeechRequest
 from std_srvs.srv import Empty
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 
-
-DEBUG = 1
+DEBUG = 1  # Включение/отключение отладочной печати
 
 class TurtleBro():
     """
-    Простой робот. Умеет:
-    ехать вперед, назад на заданное расстояние в метрах - forward(расстояние), backward(расстояние)
-    поворачивать направо и налево, на заданный угол в градусах пределах 0 +360 градусов - right(угол), left(угол)
-    ехать по прямой с заданной скоростью в м/с - linear_speed(скорость) #положительная вперед, отрицательная назад
-    поворачивать с заданной скоростью в градусах/сек - angular_speed(скорость) #положительная против часовой стрелки, отрицательная по часовой стрелке - правило правой руки
-    задавать скорость езды по прямой и поворота - speed("скорость") # в функцию должно передаваться одно из слов "fastest", "fast", "normal", "slow", "slowest"
-    полчуать текущие координаты tb.coords
-    ехать на определенные координаты (x,y) - goto(x,y)
-    получить текущие координаты и угол поворота относительно старта x,y,theta = tb.coords
-    зажигать светодиоды - color("цвет")   "цвет" может быть = "red", "green", "blue", "yellow", "white", "off"
-    записать фото - save_photo()
-    получить фото с камеры как массив cv2 a = tb.photo
-    записывать звук - record()
-    измерять дистанцию - distance()
-    вызывать пользовательские функции при нажатии на кнопку - call(имя_пользовательской_функции, аргументы_пользовательской_функции - необязательно)
-    произносить фразы - say()
-    проигрывать звуковые файлы - play()
-    находиться в режиме ожидания - wait()
-    получать данные с тепловизора tb.thermo_pixels #массив 64-х значений температуры полученных с тепловизора
+    Класс для базового робота TurtleBro с управлением движением, светодиодами, камерой и звуком
     """
 
     def __init__(self):
+        # Инициализация ROS ноды и подписчиков
         rospy.init_node("tb_py")
         rospy.Subscriber("/odom", Odometry, self.__subscriber_odometry_cb)
         rospy.Subscriber("/thermovisor", Float32MultiArray, self.__subscriber_thermo_cb)
         self.vel_pub = rospy.Publisher('/cmd_vel', Twist, queue_size=1)
+
+        # Начальные состояния
         self.odom = Odometry()
         self.thermo = Float32MultiArray()
         self.init_position_on_start = Odometry()
         self.odom_has_started = False
 
-        self.u = Utility()
-             
+        self.u = Utility()  # Вспомогательные функции
+
+        # Значения скорости
         self.linear_x_val = 0.09
         self.angular_z_val = 0.9
 
         self.wait_for_odom_to_start()
-
         self.sum_target_angle = self.__get_curent_angle(self.odom.pose.pose.orientation)
 
     def __del__(self):
+        # Остановка робота при удалении объекта
         self.vel_pub.publish(Twist())
         print("Done")
     
+    # Ожидание старта одометрии
     def wait_for_odom_to_start(self):
         while not self.odom_has_started:
             rospy.sleep(0.05)
         self.init_position_on_start = self.odom
 
+    # Основные команды движения
     def forward(self, meters):
         assert meters > 0, "Ошибка! Количество метров должно быть положительным"
         self.__move(meters)
@@ -89,6 +76,7 @@ class TurtleBro():
     def goto(self, x, y, theta = 0):
         self.__goto(x, y, theta)
 
+    # Взаимодействие с Utility
     def call(self, name, button = 24, *args, **kwargs):
         self.u.call(name, button, *args, **kwargs)
     
@@ -101,9 +89,11 @@ class TurtleBro():
     def save_photo(self, name = "robophoto"):
         self.u.photo(1, name)
 
+    # Свойства для получения координат и данных с тепловизора
     @property
     def coords(self):
-        angle_q = [self.odom.pose.pose.orientation.x, self.odom.pose.pose.orientation.y, self.odom.pose.pose.orientation.z, self.odom.pose.pose.orientation.w]
+        angle_q = [self.odom.pose.pose.orientation.x, self.odom.pose.pose.orientation.y, 
+                   self.odom.pose.pose.orientation.z, self.odom.pose.pose.orientation.w]
         (_, _, theta) = euler_from_quaternion(angle_q)
         x = self.odom.pose.pose.position.x 
         y = self.odom.pose.pose.position.y
@@ -112,9 +102,9 @@ class TurtleBro():
 
     @property
     def thermo_pixels(self):
-        thermo_arr = self.thermo.data
-        return thermo_arr
+        return self.thermo.data
 
+    # Работа с камерой и звуком
     def get_photo(self):
         return self.u.photo(0, "robophoto")
 
@@ -133,16 +123,15 @@ class TurtleBro():
     def distance(self, angle = 0):
         return self.u.distance(angle)
 
+    # Настройка скорости движения
     def speed(self, value):
-        assert type(value) == str, "'Скорость' должно быть одним из слов: fastest, fast, normal, slow, slowest"
+        assert type(value) == str, "'Скорость' должна быть одним из слов: fastest, fast, normal, slow, slowest"
         Kp = 10
         speed_dict = {"fastest":0.17, "fast":0.12, "normal":0.09, "slow":0.04, "slowest":0.01}
-        if type(value) == str:
-            self.linear_x_val = speed_dict[value]
-        else:
-            self.linear_x_val = Utility.__clamp(0.01, value, 0.17)
-            self.angular_z_val = Kp * self.linear_x_val
+        self.linear_x_val = speed_dict[value]
+        self.angular_z_val = Kp * self.linear_x_val
 
+    # Callback функции для подписчиков
     def __subscriber_odometry_cb(self, msg):
         self.odom = msg
         if not self.odom_has_started:
@@ -151,31 +140,36 @@ class TurtleBro():
     def __subscriber_thermo_cb(self, msg):
         self.thermo = msg
 
+    # Основной метод движения с трапецеидальной скоростью
     def __move(self, meters):
-        move_decel = 0.01 #distance delta to apply P regulations for speed
         if DEBUG:
-            print("init x: ", round(self.odom.pose.pose.position.x, 2), "y: ", round(self.odom.pose.pose.position.y,2))
-            print("meters: ", round(meters,2))
-        init_position = self.odom
-        init_x = 0
-        distance_passed = 0
-        vel = Twist() 
+            print("Начало движения на метров:", meters)
+
+        init_x = self.odom.pose.pose.position.x
+        init_y = self.odom.pose.pose.position.y
+        total_distance = abs(meters)
+        direction = 1 if meters > 0 else -1
+
+        vel = Twist()
+
         while not rospy.is_shutdown():
-            distance_passed = math.sqrt((self.odom.pose.pose.position.x - init_position.pose.pose.position.x)**2 + (self.odom.pose.pose.position.y - init_position.pose.pose.position.y)**2)
-            if (distance_passed < abs(meters)):
-                if meters > 0:
-                    vel.linear.x = self.__move_trapezoidal_trajectory(self.linear_x_val, init_x, distance_passed, meters, move_decel)
-                else:
-                    vel.linear.x = - self.__move_trapezoidal_trajectory(self.linear_x_val, abs(meters), distance_passed, init_x, move_decel)
-                self.vel_pub.publish(vel)
-            else:
+            dx = self.odom.pose.pose.position.x - init_x
+            dy = self.odom.pose.pose.position.y - init_y
+            distance_passed = math.sqrt(dx**2 + dy**2)
+
+            if distance_passed >= total_distance:
                 vel.linear.x = 0
                 self.vel_pub.publish(vel)
                 if DEBUG:
-                    print("Проехал м.:", round(distance_passed, 2))
+                    print("Движение завершено. Проехано:", round(distance_passed, 2))
                 return
+
+            speed = self.__move_trapezoidal_trajectory(self.linear_x_val, distance_passed, total_distance)
+            vel.linear.x = direction * speed
+            self.vel_pub.publish(vel)
             rospy.sleep(0.03)
 
+    # Навигация к точке
     def __goto(self, x, y, theta):
         heading = self.__get_turn_angle_to_point(x, y)
         distance = self.__get_distance_to_point(x, y)
@@ -185,83 +179,75 @@ class TurtleBro():
         self.__turn(math.degrees(heading))
         self.__move(distance)
 
+    # Метод поворота с трапецеидальной скоростью
     def __turn(self, degrees):
-        turn_deccel = 0.2 #delta of angles to apply P regulations for speed
-        epsilon = 0.01 #accuracy in radians
-        init_angle = self.__get_curent_angle(self.odom.pose.pose.orientation)
-
+        epsilon = 0.01
+        min_speed = 0.05
+        total_angle = math.radians(abs(degrees))
         self.sum_target_angle += math.radians(degrees)
-        curent_target_angle = self.sum_target_angle % (math.pi * 2)
-
-        readed_angle = self.__get_curent_angle(self.odom.pose.pose.orientation)
-        curent_angle = readed_angle % (math.pi*2)
-
-        turn_dir = 0
-        if (degrees > 0):
-            turn_dir = 1
-        elif(degrees < 0):
-            turn_dir = -1
-        else:
+        target_angle = self.sum_target_angle % (2 * math.pi)
+        turn_dir = 1 if degrees > 0 else -1
+        if turn_dir == 0:
             return
 
         vel = Twist()
 
         while not rospy.is_shutdown():
-            readed_angle = self.__get_curent_angle(self.odom.pose.pose.orientation)
-            curent_angle = readed_angle % (math.pi*2)
-            delta = (curent_target_angle - curent_angle)
+            current_angle = self.__get_curent_angle(self.odom.pose.pose.orientation) % (2 * math.pi)
+            delta = target_angle - current_angle
+            if delta > math.pi:
+                delta -= 2 * math.pi
+            elif delta < -math.pi:
+                delta += 2 * math.pi
 
-            if DEBUG:
-                print("градус на который надо повернуть: ",  curent_target_angle)
-                print(readed_angle, "прочитанный угол")
-                print(init_angle, "начальный угол")
-                print(curent_angle, "текущий угол") 
-                print(delta, "дельта")
-            
-            if (turn_dir > 0 and abs(delta) > epsilon):
-                vel.angular.z = self.__turn_trapezoidal_trajectory(self.angular_z_val, delta, turn_deccel)
-            elif(turn_dir < 0 and abs(delta) > epsilon):
-                vel.angular.z = -self.__turn_trapezoidal_trajectory(self.angular_z_val, delta, turn_deccel)
-            else:
+            if abs(delta) <= epsilon:
                 vel.angular.z = 0
                 self.vel_pub.publish(vel)
                 if DEBUG:
-                    print("Повернул град.:", math.degrees(curent_angle))
+                    print(f"Поворот завершен. Угол: {math.degrees(current_angle):.2f}°")
                 return
+
+            speed = self.__turn_trapezoidal_trajectory(self.angular_z_val, delta, total_angle, min_speed)
+            vel.angular.z = turn_dir * speed
             self.vel_pub.publish(vel)
-            rospy.sleep(0.05)     
+            rospy.sleep(0.05)
 
-    def __move_trapezoidal_trajectory(self, speed, init_x, curent_x, aim_x, zero_deccel):
-        if abs(curent_x - aim_x) < zero_deccel:
-            return abs(curent_x - aim_x) * speed
-        elif abs(curent_x - init_x) < zero_deccel:
-            return (0.5 * speed)
+    # Вычисление скорости по трапецеидальной траектории для движения
+    def __move_trapezoidal_trajectory(self, max_speed, distance_passed, total_distance, min_speed=0.05):
+        move_deccel = max(total_distance * 0.5, 0.10)
+        distance_remaining = total_distance - distance_passed
+        if distance_remaining < move_deccel:
+            speed = max(min_speed, max_speed * (distance_remaining / move_deccel))
         else:
-            return speed
-
-    def __turn_trapezoidal_trajectory(self, speed, delta, zero_deccel):
-        if abs(delta) < zero_deccel:
-            return abs(delta) * speed
+            speed = max_speed
         return speed
 
-    def __get_angle_diff(self, prev_orientation, current_orientation):
-        prev_q = [prev_orientation.x, prev_orientation.y,
-                    prev_orientation.z, prev_orientation.w]
-        current_q = [current_orientation.x, current_orientation.y,
-                        current_orientation.z, current_orientation.w]
+    # Вычисление скорости по трапецеидальной траектории для поворота
+    def __turn_trapezoidal_trajectory(self, max_speed, delta, total_angle, min_speed=0.075):
+        turn_deccel = max(total_angle * 0.7, 0.2)
+        if abs(delta) < turn_deccel:
+            speed = max(min_speed, max_speed * (abs(delta) / turn_deccel))
+        else:
+            speed = max_speed
+        return speed
 
+    # Различные вспомогательные функции для углов и дистанций
+    def __get_angle_diff(self, prev_orientation, current_orientation):
+        prev_q = [prev_orientation.x, prev_orientation.y, prev_orientation.z, prev_orientation.w]
+        current_q = [current_orientation.x, current_orientation.y, current_orientation.z, current_orientation.w]
         delta_q = quaternion_multiply(prev_q, quaternion_inverse(current_q))
         (_, _, yaw) = euler_from_quaternion(delta_q)
         return -yaw
     
     def __get_curent_angle(self,current_orientation):
         current_q = [current_orientation.x, current_orientation.y,
-                current_orientation.z, current_orientation.w]
+                     current_orientation.z, current_orientation.w]
         (_, _, yaw) = euler_from_quaternion(current_q)
         return yaw
 
     def __get_turn_angle_to_point(self, x, y):
-        angle_q = [self.odom.pose.pose.orientation.x, self.odom.pose.pose.orientation.y, self.odom.pose.pose.orientation.z, self.odom.pose.pose.orientation.w]
+        angle_q = [self.odom.pose.pose.orientation.x, self.odom.pose.pose.orientation.y, 
+                   self.odom.pose.pose.orientation.z, self.odom.pose.pose.orientation.w]
         (_, _, yaw) = euler_from_quaternion(angle_q)
         heading = -math.atan2(y,x)
         angle_to_turn = yaw - heading
@@ -270,6 +256,7 @@ class TurtleBro():
     def __get_distance_to_point(self, x, y):
         return math.sqrt((self.odom.pose.pose.position.x - x)**2 + (self.odom.pose.pose.position.y - y)**2)
 
+    # Прямое управление скоростью
     def linear_speed(self, v):
         vel = Twist()
         vel.linear.x = v
@@ -285,14 +272,11 @@ class TurtleBro():
         if DEBUG:
             print("Поворачиваю с угловой скоростью:", w, "радиан/с")
 
-         
 
+# Класс для автономной навигации
 class TurtleNav(TurtleBro):
     """
-    Робот осуществляющий передвижения при помощи автономной навигации. 
-    Умеет:
-    ехать на определенные координаты (x,y) и theta(опционально) угол поворота после того, как робот приедет на эти координаты - goto(x,y, theta)
-    Кроме того доступны все остальные команды простого робота:
+    Робот с поддержкой move_base для навигации к координатам
     """
 
     def __init__(self):
@@ -300,6 +284,7 @@ class TurtleNav(TurtleBro):
         self.movebase_client = actionlib.SimpleActionClient('move_base', MoveBaseAction)
 
     def __goal_message_assemble(self, x ,y, theta):
+        # Формируем сообщение цели для move_base
         goal = MoveBaseGoal()
         goal.target_pose.header.frame_id = "map"
         goal.target_pose.header.stamp = rospy.Time.now()
@@ -315,14 +300,13 @@ class TurtleNav(TurtleBro):
         return goal
 
     def __goto(self, x, y, theta):
-        """
-        Переопределенная функция базового класса для езды по навигации
-        """
+        # Переопределяем goto для move_base
         goal = self.__goal_message_assemble(x, y, theta)
         self.movebase_client.wait_for_server()
         self.movebase_client.send_goal_and_wait(goal)
 
 
+# Вспомогательный класс с сенсорами, светодиодами, камерой и звуком
 class Utility():
 
     def __init__(self):
@@ -335,8 +319,9 @@ class Utility():
         self.colorpub = rospy.Publisher("/py_leds", Int16, queue_size=10)
         self.speech_service = rospy.ServiceProxy('festival_speech', Speech)
 
+        # Ждем появления данных сканера
         time_counter = 0
-        time_to_wait = 3 #seconds to wait for scan to start
+        time_to_wait = 3
         while(len(self.scan.ranges)<=1):
             dt = 0.1
             rospy.sleep(dt)
@@ -352,6 +337,7 @@ class Utility():
     def __del__(self):
         self.color("blue")
 
+    # Callback функции
     def __subscriber_scan_cb(self, msg):
         self.scan = msg
 
@@ -359,10 +345,11 @@ class Utility():
         try:
             if(msg.data):
                 self.names_of_func_to_call[msg.data](*self.args_of_func_to_call[msg.data], **self.kwargs_of_func_to_call[msg.data])
-                rospy.sleep(0.5) #workaround for non lib functions
+                rospy.sleep(0.5)
         except BaseException:
             pass
 
+    # Регистрация функций на кнопки
     def call(self, name, button = 24, *args, **kwargs):
         self.names_of_func_to_call[button] = name
         self.args_of_func_to_call[button] = args
@@ -374,6 +361,7 @@ class Utility():
         else:
             rospy.sleep(time)
 
+    # Управление светодиодами
     def color(self, col):
         assert type(col) == str, "Имя цвета должно быть: red, green, blue, yellow, white или off"
         rgb = {"red":1, "green":2, "blue":3, "yellow":4, "white":5, "off":6}
@@ -381,6 +369,7 @@ class Utility():
         shade.data = int(rgb[col])
         self.colorpub.publish(shade)
 
+    # Получение расстояния по лазеру
     def distance(self, angle):
         assert type(angle) == int or type(angle) == float, "Угол должен быть числом от 0 до 359"
         if (angle == 0):
@@ -401,6 +390,7 @@ class Utility():
         else:
             return None
     
+    # Работа с камерой
     def photo(self, save, name): 
         assert type(name) == str, "Имя файла фото должно быть строкой"
         try:
@@ -416,12 +406,14 @@ class Utility():
         except Exception as e:
             print(e)
 
+    # Запись звука
     def record(self, timeval, filename, format = ".wav"):
         assert timeval > 0 and (type(timeval) == float or type(timeval) == int), "Временной интервал должен быть положительным числом"
         p = subprocess.Popen(["arecord", "-D", "hw:1,0", "-f", "S16_LE", "-r 48000", "/home/pi/" + filename + format]) 
         rospy.sleep(timeval)
         p.kill()
 
+    # Произнесение текста
     def say(self, text):
         if type(text) != str:
             try:
@@ -431,9 +423,12 @@ class Utility():
         self.speech_service.wait_for_service()
         self.speech_service.call(SpeechRequest(data = text))
     
+    # Воспроизведение файла
     def play(self, filename):
         assert filename, "Файл для воспроизведения не задан"
         p = subprocess.Popen(["aplay", "/home/pi/" + filename]) 
 
+    @staticmethod
     def __clamp(min_val, value, max_val):
+        # Ограничение значения между min_val и max_val
         return max(min_val, min(value, max_val))
