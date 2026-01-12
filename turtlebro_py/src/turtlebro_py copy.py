@@ -4,7 +4,6 @@ import subprocess
 import math
 import cv2
 import numpy as np
-import sys
 
 from tf.transformations import quaternion_multiply, quaternion_inverse, euler_from_quaternion, quaternion_from_euler
 
@@ -16,6 +15,9 @@ from sensor_msgs.msg import LaserScan, CompressedImage
 from turtlebro_speech.srv import Speech, SpeechResponse, SpeechRequest
 from std_srvs.srv import Empty
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
+
+
+DEBUG = 1
 
 class TurtleBro():
     """
@@ -32,20 +34,15 @@ class TurtleBro():
     вызывать пользовательские функции при нажатии на кнопку - call()
     произносить фразы - say()
     находиться в режиме ожидания - wait()
-    Для запуска робота в режиме отладки вызовите программу с ключем -d, --d, -debug, --debug или при инициализации класса TurtleBro поставьте 1 в аргумент TurtleBro(1)
     """
 
-    def __init__(self, debug = False):
+    def __init__(self):
         rospy.init_node("tb_py")
         rospy.Subscriber("/odom", Odometry, self.__subscriber_odometry_cb)
         self.vel_pub = rospy.Publisher('/cmd_vel', Twist, queue_size=1)
         self.odom = Odometry()
 
-        self.debug = self._detect_debug() or debug
-        if self.debug:
-            print("Debug mode")
-
-        self.u = Utility(self.debug)
+        self.u = Utility()
              
         self.linear_x_val = 0.09
         self.angular_z_val = 0.9
@@ -54,18 +51,7 @@ class TurtleBro():
 
     def __del__(self):
         self.vel_pub.publish(Twist())
-        if self.debug:
-            print("Done")
-
-    def _detect_debug(self) -> bool:
-    # argv процесса, очищенный от ROS remap-аргументов
-        try:
-            argv = rospy.myargv(argv=sys.argv)  # сохраняет обычные флаги типа -d
-        except Exception:
-            argv = sys.argv
-
-        tokens = {"-d", "--debug", "-debug", "d", "debug", "--d"}
-        return any(a in tokens for a in argv[1:])
+        print("Done")
 
     def forward(self, meters):
         assert meters > 0, "Ошибка! Количество метров должно быть положительным"
@@ -129,7 +115,7 @@ class TurtleBro():
         self.odom = msg
 
     def __move(self, meters):
-        if self.debug:
+        if DEBUG:
             print("init x: ", self.odom.pose.pose.position.x, "y: ", self.odom.pose.pose.position.y)
             print("meters: ", meters)
         init_position = self.odom
@@ -148,7 +134,7 @@ class TurtleBro():
             else:
                 vel.linear.x = 0
                 self.vel_pub.publish(vel)
-                if self.debug:
+                if DEBUG:
                     print("Проехал м.:", distance_passed)
                 return
             rospy.sleep(0.05)
@@ -160,159 +146,28 @@ class TurtleBro():
         self.__move(distance)
 
     def __turn(self, degrees):
-        """
-        Поворот на заданный угол (градусы) по IMU.
-        degrees > 0: влево, degrees < 0: вправо.
-        """
-        angle_goal = math.radians(float(degrees))
-        if abs(angle_goal) < 1e-4:
-            return
-
-        rate = rospy.Rate(50)
-
-        # ---------------- helpers ----------------
-        def valid_yaw(y):
-            return (y is not None) and (not math.isnan(y)) and (not math.isinf(y))
-
-        def wrap_pi(a):
-            # "железобетонная" регуляризация
-            while a > math.pi:
-                a -= 2.0 * math.pi
-            while a < -math.pi:
-                a += 2.0 * math.pi
-            return a
-
-        def get_yaw():
-            current_q = [self.odom.pose.pose.orientation.x, self.odom.pose.pose.orientation.y,
-                self.odom.pose.pose.orientation.z, self.odom.pose.pose.orientation.w]
-            (_, _, yaw) = euler_from_quaternion(current_q)
-            if not valid_yaw(yaw):
-                return None
-            # Если понадобится инверсия знака IMU под вашу кинематику — раскомментируй:
-            # yaw *= getattr(self, "imu_yaw_sign", 1.0)  # +1 или -1
-            return yaw
-
-        # -------- wait IMU stable measurements --------
-        stable_needed = 8
-        stable = 0
-        t0 = rospy.Time.now()
-        yaw0 = None
-
-        while not rospy.is_shutdown() and stable < stable_needed:
-            y = get_yaw()
-            if y is not None:
-                yaw0 = y
-                stable += 1
-            else:
-                stable = 0
-
-            if (rospy.Time.now() - t0).to_sec() > 2.0:
-                raise RuntimeError("IMU не отвечает/невалидна: нет стабильного yaw")
-            rate.sleep()
-
-        # ---------------- controller params ----------------
-        # max_w задаётся внешней speed()
-        max_w = abs(float(self.angular_z_val))
-
-        # минимальная скорость, чтобы не “залипать” на трении; привяжем к max_w
-        min_w = max(0.12, 0.15 * max_w)
-
-        # P-регулятор по ошибке угла (можно подбирать)
-        kp = 1.8
-
-        stop_eps = math.radians(0.3)     # точность остановки ~0.3°
-        slow_zone = math.radians(20.0)   # зона замедления
-
-        # таймаут по “физике” (чем больше угол — тем больше времени)
-        timeout_sec = max(4.0, 1.5 + abs(angle_goal) / max(0.20, 0.35 * max_w))
-
-        # ---------------- unwrap state ----------------
-        yaw_prev = yaw0
-        yaw_unwrapped = 0.0
-
+        angle_delta = 0
+        prev_pose = self.odom
+        init_angle = 0
         vel = Twist()
-        t_start = rospy.Time.now()
-
-        # settle logic: удержаться в точности несколько циклов
-        settle_cycles_need = 6
-        settle_cycles = 0
-
-        # no-progress protection
-        best_abs_err = float("inf")
-        no_progress = 0
-        no_progress_limit = 25  # ~0.5 сек при 50 Гц
-
-        # санитарный порог на скачок IMU между соседними измерениями
-        # (на 50 Гц физически сложно получить огромный dy без глюка/перезапуска фильтра)
-        dy_jump_limit = 1.2  # рад ~ 69°
-
+        epsilon = 0.01
+        angle = math.radians(degrees)
         while not rospy.is_shutdown():
-            y = get_yaw()
-            if y is None:
-                rate.sleep()
-                continue
-
-            # unwrap step
-            dy = wrap_pi(y - yaw_prev)
-            yaw_prev = y
-
-            if abs(dy) > dy_jump_limit:
-                # пропускаем подозрительный скачок (не портим unwrap)
-                rate.sleep()
-                continue
-
-            yaw_unwrapped += dy
-
-            err = angle_goal - yaw_unwrapped
-            abs_err = abs(err)
-
-            # settle condition
-            if abs_err <= stop_eps:
-                settle_cycles += 1
-                if settle_cycles >= settle_cycles_need:
-                    break
+            if (abs(angle_delta) + epsilon < abs(angle)):
+                if angle > 0:
+                    vel.angular.z = self.__vel_z_turn_value(self.angular_z_val, init_angle, angle_delta, angle)
+                else:
+                    vel.angular.z = -self.__vel_z_turn_value(self.angular_z_val, init_angle, abs(angle_delta), abs(angle))
+                angle_delta += self.__get_angle_diff(prev_pose.pose.pose.orientation, self.odom.pose.pose.orientation)
+                self.vel_pub.publish(vel)
+                prev_pose = self.odom
             else:
-                settle_cycles = 0
-
-            # progress tracking
-            if abs_err < best_abs_err - math.radians(0.2):
-                best_abs_err = abs_err
-                no_progress = 0
-            else:
-                no_progress += 1
-                if no_progress >= no_progress_limit:
-                    break
-
-            # compute angular velocity
-            w = kp * err
-
-            # замедление вблизи цели и анти-залипание
-            if abs_err < slow_zone:
-                w = max(min_w, abs(w)) * (1.0 if w >= 0 else -1.0)
-
-            # clamp по max_w (из speed())
-            if w > max_w:
-                w = max_w
-            elif w < -max_w:
-                w = -max_w
-
-            vel.linear.x = 0.0
-            vel.angular.z = w
-            self.vel_pub.publish(vel)
-
-            # timeout safety
-            if (rospy.Time.now() - t_start).to_sec() > timeout_sec:
-                break
-
-            rate.sleep()
-
-        if self.debug:
-            print(f"Повернул на градус.: {math.degrees(y)}")
-
-        # stop
-        vel.linear.x = 0.0
-        vel.angular.z = 0.0
-        self.vel_pub.publish(vel)
+                vel.angular.z = 0
+                self.vel_pub.publish(vel)
+                if DEBUG:
+                    print("Повернул град.:", math.degrees(angle_delta))
+                return
+            rospy.sleep(0.05)
     
     #TODO to add flat range at the begining and the end of traj
     def __vel_x_move_value(self, speed, init_x, curent_x, aim_x):
@@ -419,15 +274,13 @@ class TurtleNav(TurtleBro):
 
 class Utility():
 
-    def __init__(self, debug):
+    def __init__(self):
         self.scan = LaserScan()
         self.names_of_func_to_call = {}
         rospy.Subscriber("/scan", LaserScan, self.__subscriber_scan_cb)
         rospy.Subscriber("/buttons", Int16, self.__subscriber_buttons_cb, queue_size=1)
         self.colorpub = rospy.Publisher("/py_leds", Int16, queue_size=10)
         
-        self.debug = debug
-
         rospy.sleep(0.3)
 
         # odom_reset = rospy.ServiceProxy('reset', Empty)
@@ -440,7 +293,7 @@ class Utility():
         self.speech_service = rospy.ServiceProxy('festival_speech', Speech)
     
     def __del__(self):
-        self.__color("off")
+        self.__color("blue")
 
     def __subscriber_scan_cb(self, msg):
         self.scan = msg
@@ -496,7 +349,7 @@ class Utility():
         image_from_ros_camera = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
         if save:
             cv2.imwrite("/home/pi/"+ name +".jpg", image_from_ros_camera)
-            if self.debug:
+            if DEBUG:
                 print("Фото записано в /home/pi/" + name +".jpg")
         else:
             return image_from_ros_camera
@@ -508,7 +361,6 @@ class Utility():
         p.kill()
 
     def __say(self, text):
-        #здесь не assert, а попытка прикастовать аргумент к строке
         if type(text) != str:
             try:
                 text = str(text)
