@@ -30,7 +30,7 @@ class TurtleBro():
     записать фото - save_photo()
     получить фото с камеры как массив cv2 a = tb.photo
     записывать звук - record()
-    измерять дистанцию - distance()
+    измерять дистанцию - lidar_distance()
     вызывать пользовательские функции при нажатии на кнопку - call()
     произносить фразы - say()
     находиться в режиме ожидания - wait()
@@ -73,16 +73,16 @@ class TurtleBro():
         self.__goto(x, y, theta)
 
     def call(self, name, button = 24):
-        self.u.call(name, button)
+        self.u.__call(name, button)
     
     def wait(self, time):
-        self.u.wait(time)
+        self.u.__wait(time)
 
     def color(self, col):
-        self.u.color(col)
+        self.u.__color(col)
     
     def save_photo(self, name = "robophoto"):
-        self.u.photo(1, name)
+        self.u.__photo(1, name)
 
     @property
     def coords(self):
@@ -90,16 +90,16 @@ class TurtleBro():
 
     @property
     def photo(self):
-        return self.u.photo(0, "robophoto")
+        return self.u.__photo(0, "robophoto")
 
     def record(self, timeval = 3, filename = "turtlebro_sound"):
-        self.u.record(timeval, filename)
+        self.u.__record(timeval, filename)
 
     def say(self, text = "Привет"):
-        self.u.say(text)
+        self.u.__say(text)
     
-    def distance(self, angle = 0):
-        return self.u.distance(angle)
+    def lidar_distance(self, angle = 0):
+        return self.u.__get_lidar_distance(angle)
 
     def speed(self, value):
         assert type(value) == str, "'Скорость' должно быть одним из слов: fastest, fast, normal, slow, slowest"
@@ -142,8 +142,8 @@ class TurtleBro():
     def __goto(self, x, y, theta):
         heading = self.__get_turn_angle_to_point(x, y)
         distance = self.__get_distance_to_point(x, y)
-        self.__turn(heading)
-        self.__move(distance)
+        #self.__turn(heading)
+        #self.__move(distance)
 
     def __turn(self, degrees):
         angle_delta = 0
@@ -212,13 +212,16 @@ class TurtleBro():
         return -yaw
 
     def __get_turn_angle_to_point(self, x, y):
-        (_, _, yaw) = euler_from_quaternion(self.odom.pose.pose.orientation)
-        heading = math.atan2(y,x)
-        angle_to_turn = yaw - heading
+        current_q = [self.odom.pose.pose.orientation.x, self.odom.pose.pose.orientation.y,
+                self.odom.pose.pose.orientation.z, self.odom.pose.pose.orientation.w]
+        (_, _, yaw) = euler_from_quaternion(current_q)
+        heading = math.atan2(y - self.odom.pose.pose.position.y, x - self.odom.pose.pose.position.x)
+        angle_to_turn = math.degrees(yaw - heading)
+        print(f"yaw = {math.degrees(yaw)}, heading = {math.degrees(heading)}, angle_to_turn = {angle_to_turn}")
         return angle_to_turn
 
     def __get_distance_to_point(self, x, y):
-        distance = math.sqrt((self.odom.pose.pose.position.x - x)**2 + (self.odom.pose.pose.position.y - y)**2)
+        distance = math.hypot((self.odom.pose.pose.position.x - x),(self.odom.pose.pose.position.y - y))
         return distance
 
 class TurtleNav(TurtleBro):
@@ -236,7 +239,7 @@ class TurtleNav(TurtleBro):
     записать фото - save_photo()
     получить фото с камеры как массив cv2 a = tb.photo
     записывать звук - record()
-    измерять дистанцию - distance()
+    измерять дистанцию - lidar_distance()
     вызывать пользовательские функции при нажатии на кнопку - call()
     произносить фразы - say()
     находиться в режиме ожидания - wait()
@@ -261,7 +264,7 @@ class TurtleNav(TurtleBro):
 
         return goal
 
-    def __goto(self, x, y, theta):
+    def goto(self, x, y, theta):
         """
         Переопределенная функция базового класса для езды по навигации
         """
@@ -291,7 +294,7 @@ class Utility():
         self.speech_service = rospy.ServiceProxy('festival_speech', Speech)
     
     def __del__(self):
-        self.color("blue")
+        self.__color("blue")
 
     def __subscriber_scan_cb(self, msg):
         self.scan = msg
@@ -304,23 +307,23 @@ class Utility():
         except BaseException:
             pass
 
-    def call(self, name, button = 24):
+    def __call(self, name, button = 24):
         self.names_of_func_to_call[button] = name
     
-    def wait(self, time = 0):
+    def __wait(self, time = 0):
         if time == 0:
             rospy.spin()
         else:
             rospy.sleep(time)
 
-    def color(self, col):
+    def __color(self, col):
         assert type(col) == str, "Имя цвета должно быть строкой"
         rgb = {"red":1, "green":2, "blue":3, "yellow":4, "white":5, "off":6}
         shade = Int16()
         shade.data = int(rgb[col])
         self.colorpub.publish(shade)
 
-    def distance(self, angle):
+    def __get_lidar_distance(self, angle):
         assert type(angle) == int or type(angle) == float, "Угол должен быть числом"
         if (angle == 0):
             if self.scan.ranges[0] != float("inf"):
@@ -340,7 +343,7 @@ class Utility():
         else:
             return None
     
-    def photo(self, save, name = "robophoto"): 
+    def __photo(self, save, name = "robophoto"): 
         assert type(name) == str, "Имя файла фото должно быть строкой"
         image_msg = rospy.wait_for_message("/front_camera/image_raw/compressed", CompressedImage)
         np_arr = np.frombuffer(image_msg.data, np.uint8)
@@ -352,13 +355,13 @@ class Utility():
         else:
             return image_from_ros_camera
 
-    def record(self, timeval, filename):
+    def __record(self, timeval, filename):
         assert timeval > 0 and (type(timeval) == float or type(timeval) == int), "Временной интервал должен быть положительным числом"
         p = subprocess.Popen(["arecord", "-D", "hw:1,0", "-f", "S16_LE", "-r 48000", "/home/pi/" + filename + ".ogg"]) 
         rospy.sleep(timeval)
         p.kill()
 
-    def say(self, text):
+    def __say(self, text):
         if type(text) != str:
             try:
                 text = str(text)
