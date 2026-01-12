@@ -142,8 +142,8 @@ class TurtleBro():
     def __goto(self, x, y, theta):
         heading = self.__get_turn_angle_to_point(x, y)
         distance = self.__get_distance_to_point(x, y)
-        #self.__turn(heading)
-        #self.__move(distance)
+        self.__turn(heading)
+        self.__move(distance)
 
     def __turn(self, degrees):
         angle_delta = 0
@@ -217,7 +217,6 @@ class TurtleBro():
         (_, _, yaw) = euler_from_quaternion(current_q)
         heading = math.atan2(y - self.odom.pose.pose.position.y, x - self.odom.pose.pose.position.x)
         angle_to_turn = math.degrees(yaw - heading)
-        print(f"yaw = {math.degrees(yaw)}, heading = {math.degrees(heading)}, angle_to_turn = {angle_to_turn}")
         return angle_to_turn
 
     def __get_distance_to_point(self, x, y):

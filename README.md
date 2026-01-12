@@ -52,6 +52,12 @@ https://github.com/voltbro/turtlebro_extra/tree/master/turtlebro_patrol
 
 Пакет, реализующий функцию "патрулирования (перемещение между заданными точками)" на роботах TurtleBro и BRover V.4
 
+### turtlebro_searcher
+
+https://github.com/voltbro/turtlebro_extra/tree/master/turtlebro_searcher
+
+Пакет предназначен для работы робота TurtleBro в ролевой моедли "Поисковик". Этот пакет дублирует функицонал пакета turtlebro_excursions, но вместо озвучивания точек, данные публикуются в топик /aruco_marker
+
 ### turtlebro_speech
 
 https://github.com/voltbro/turtlebro_extra/tree/master/turtlebro_speech

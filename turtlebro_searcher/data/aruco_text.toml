@@ -1,0 +1,11 @@
+[empty]
+text = "Marker not detected"
+
+[unknown]
+text = "I`m detecting unknown marker"
+
+[16]
+text = "I`m detecting a marker 16"
+
+[23]
+text = "I`m detecting a marker 23"

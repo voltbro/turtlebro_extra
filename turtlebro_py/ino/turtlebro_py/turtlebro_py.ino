@@ -1,14 +1,25 @@
 #include <ros.h>
-#include <std_msgs/Int16.h>
-#include <FastLED.h>
 
+
+//buttons_part
+#include <std_msgs/Int16.h>
+std_msgs::Int16 button_num;
+
+//LED part
+#include <FastLED.h>
 #define DATA_PIN 30
 #define NUM_LEDS 24
 #define BRIGHTNESS 200
-
-std_msgs::Int16 button_num;
-
 CRGB leds[NUM_LEDS];
+
+//Thermovisor part
+#include <std_msgs/Float32MultiArray.h>
+#include <Wire.h>
+#include <Adafruit_AMG88xx.h>
+Adafruit_AMG88xx amg;
+float pixels[AMG88xx_PIXEL_ARRAY_SIZE];
+std_msgs::Float32MultiArray thermo_arr;
+
 
 class NewHardware : public ArduinoHardware
 {
@@ -75,42 +86,59 @@ void led_cb(const std_msgs::Int16 &led_msg){
 }
 
 ros::NodeHandle_<NewHardware>  nh;
-ros::Publisher pub("/buttons", &button_num);
+ros::Publisher button_pub("/buttons", &button_num);
 ros::Subscriber<std_msgs::Int16> sub("py_leds", &led_cb);
+ros::Publisher thermo_pub("/thermovisor", &thermo_arr);
+
+int read_buttons()
+{
+  if(digitalRead(23))
+  {
+    return 23;
+  }
+  if(digitalRead(24))
+  {
+    return 24;
+  }
+  else return 0;
+}
+
+void thermo_read()
+{
+  
+}
+
 
 void setup() {
   delay(500); // sanity delay
   FastLED.addLeds<NEOPIXEL, DATA_PIN>(leds, NUM_LEDS);
   FastLED.setBrightness( BRIGHTNESS );
   pinMode(13, OUTPUT);
-  pinMode(22, INPUT);
   pinMode(23, INPUT);
   pinMode(24, INPUT);
-  pinMode(25, INPUT);
+
+  amg.begin(); //thermovisor
+  thermo_arr.data = (float*)malloc(sizeof(float) * AMG88xx_PIXEL_ARRAY_SIZE);
+  thermo_arr.data_length = AMG88xx_PIXEL_ARRAY_SIZE;
+  
   nh.initNode();
-  nh.advertise(pub);
+  nh.advertise(button_pub);
+  nh.advertise(thermo_pub);
   nh.subscribe(sub);
 }
 
 void loop() {
+  amg.readPixels(pixels);
+  for(int i = 0;i < AMG88xx_PIXEL_ARRAY_SIZE; i++)
+  {
+    thermo_arr.data[i] = pixels[i];
+  }
+  thermo_pub.publish(&thermo_arr);
+  
+  //button part
   button_num.data = 0;
-  if(digitalRead(22))
-  {
-    button_num.data = 22;
-  }
-  if(digitalRead(23))
-  {
-    button_num.data = 23;
-  }
-  if(digitalRead(24))
-  {
-    button_num.data = 24;
-  }
-  if(digitalRead(25))
-  {
-    button_num.data = 25;
-  }
-  pub.publish(&button_num);
+  button_num.data = read_buttons();
+  button_pub.publish(&button_num);
   nh.spinOnce();
   delay(50);
 }

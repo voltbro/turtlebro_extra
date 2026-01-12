@@ -1,0 +1,38 @@
+<launch>
+  <!-- Arguments -->
+
+  <arg name="patrol_data_file" default="$(find turtlebro_excursions)/data/goals.toml"/>
+  <arg name="aruco_data_file" default="$(find turtlebro_excursions)/data/aruco_text.toml"/>
+
+  <arg name="fake_move_base" default="false"/>
+  <arg name="point_callback_service" default="point_aruco"/>  
+
+  <!-- Aruco view service -->
+  <include file="$(find turtlebro_aruco)/launch/aruco_service.launch"/>
+  
+  <!-- Excursion + Aruco service -->
+  <node pkg="turtlebro_excursions" type="aruco_speech.py" name="excursion_point_service" output="screen" required="true">
+      <param name="aruco_data_file" value="$(arg aruco_data_file)"/>
+  </node>
+
+  <!-- Run Speech service -->
+  <include file="$(find turtlebro_speech)/launch/speech_service.launch"/>
+  
+  <!-- Run Navigation for Patroll -->
+  <include file="$(find turtlebro_patrol)/launch/navigation_slam.launch">
+      <arg name="fake_move_base" value="$(arg fake_move_base)"/>
+  </include>
+ 
+  <!-- Patrol Node with point_callback_service service-->
+  <node pkg="turtlebro_patrol" type="patrol.py" name="turtlebro_patrol" output="screen" required="true">
+    <param name="config_data_file" value="$(arg patrol_data_file)"/>
+    <param name="point_callback_service" value="$(arg point_callback_service)"/>    
+  </node>
+
+  <!-- Run Heat Sensor -->
+ <include file="$(find turtlebro_overheat_sensor)/launch/heat_sensor.launch"/>
+
+  <!--Heat speaker Node -->
+  <node pkg="turtlebro_excursions" type="heat_speaker.py" name="heat_speaker" output="screen" required="true" />
+
+</launch>
