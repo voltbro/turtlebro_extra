@@ -87,16 +87,16 @@ class TurtleBro():
         self.__goto(x, y, theta)
 
     def call(self, name, button = 24):
-        self.u.__call(name, button)
+        self.u.call(name, button)
     
     def wait(self, time):
-        self.u.__wait(time)
+        self.u.wait(time)
 
     def color(self, col):
-        self.u.__color(col)
+        self.u.color(col)
     
     def save_photo(self, name = "robophoto"):
-        self.u.__photo(1, name)
+        self.u.photo(1, name)
 
     @property
     def coords(self):
@@ -104,16 +104,16 @@ class TurtleBro():
 
     @property
     def photo(self):
-        return self.u.__photo(0, "robophoto")
+        return self.u.photo(0, "robophoto")
 
     def record(self, timeval = 3, filename = "turtlebro_sound"):
-        self.u.__record(timeval, filename)
+        self.u.record(timeval, filename)
 
     def say(self, text = "Привет"):
-        self.u.__say(text)
+        self.u.say(text)
     
     def lidar_distance(self, angle = 0):
-        return self.u.__get_lidar_distance(angle)
+        return self.u.get_lidar_distance(angle)
 
     def speed(self, value):
         assert type(value) == str, "'Скорость' должно быть одним из слов: fastest, fast, normal, slow, slowest"
@@ -122,7 +122,7 @@ class TurtleBro():
         if type(value) == str:
             self.linear_x_val = speed_dict[value]
         else:
-            self.linear_x_val = Utility.__clamp(0.01, value, 0.17)
+            self.linear_x_val = Utility.clamp(0.01, value, 0.17)
             self.angular_z_val = Kp * self.linear_x_val
 
     def __subscriber_odometry_cb(self, msg):
@@ -440,7 +440,7 @@ class Utility():
         self.speech_service = rospy.ServiceProxy('festival_speech', Speech)
     
     def __del__(self):
-        self.__color("off")
+        self.color("off")
 
     def __subscriber_scan_cb(self, msg):
         self.scan = msg
@@ -453,23 +453,23 @@ class Utility():
         except BaseException:
             pass
 
-    def __call(self, name, button = 24):
+    def call(self, name, button = 24):
         self.names_of_func_to_call[button] = name
     
-    def __wait(self, time = 0):
+    def wait(self, time = 0):
         if time == 0:
             rospy.spin()
         else:
             rospy.sleep(time)
 
-    def __color(self, col):
+    def color(self, col):
         assert type(col) == str, "Имя цвета должно быть строкой"
         rgb = {"red":1, "green":2, "blue":3, "yellow":4, "white":5, "off":6}
         shade = Int16()
         shade.data = int(rgb[col])
         self.colorpub.publish(shade)
 
-    def __get_lidar_distance(self, angle):
+    def get_lidar_distance(self, angle):
         assert type(angle) == int or type(angle) == float, "Угол должен быть числом"
         if (angle == 0):
             if self.scan.ranges[0] != float("inf"):
@@ -489,7 +489,7 @@ class Utility():
         else:
             return None
     
-    def __photo(self, save, name = "robophoto"): 
+    def photo(self, save, name = "robophoto"): 
         assert type(name) == str, "Имя файла фото должно быть строкой"
         image_msg = rospy.wait_for_message("/front_camera/image_raw/compressed", CompressedImage)
         np_arr = np.frombuffer(image_msg.data, np.uint8)
@@ -501,13 +501,13 @@ class Utility():
         else:
             return image_from_ros_camera
 
-    def __record(self, timeval, filename):
+    def record(self, timeval, filename):
         assert timeval > 0 and (type(timeval) == float or type(timeval) == int), "Временной интервал должен быть положительным числом"
         p = subprocess.Popen(["arecord", "-D", "hw:1,0", "-f", "S16_LE", "-r 48000", "/home/pi/" + filename + ".ogg"]) 
         rospy.sleep(timeval)
         p.kill()
 
-    def __say(self, text):
+    def say(self, text):
         #здесь не assert, а попытка прикастовать аргумент к строке
         if type(text) != str:
             try:
@@ -517,5 +517,5 @@ class Utility():
         self.speech_service.wait_for_service()
         self.speech_service.call(SpeechRequest(data = text))
 
-    def __clamp(min_val, value, max_val):
+    def clamp(min_val, value, max_val):
         return max(min_val, min(value, max_val))
