@@ -32,6 +32,7 @@ class TurtleBro():
     вызывать пользовательские функции при нажатии на кнопку - call()
     произносить фразы - say()
     находиться в режиме ожидания - wait()
+    воспроизводить записанный ранее файл - play(имя файла)
     Для запуска робота в режиме отладки вызовите программу с ключем -d, --d, -debug, --debug или при инициализации класса TurtleBro поставьте 1 в аргумент TurtleBro(1)
     """
 
@@ -83,8 +84,8 @@ class TurtleBro():
         assert degrees > 0, "Ошибка! Количество градусов должно быть положительным"
         self.__turn(degrees)
 
-    def goto(self, x, y, theta = 0):
-        self.__goto(x, y, theta)
+    def goto(self, x, y):
+        self.__goto(x, y)
 
     def call(self, name, button = 24):
         self.u.call(name, button)
@@ -111,6 +112,9 @@ class TurtleBro():
 
     def say(self, text = "Привет"):
         self.u.say(text)
+
+    def play(self, filename):
+        self.u.play(filename)
     
     def lidar_distance(self, angle = 0):
         return self.u.get_lidar_distance(angle)
@@ -153,7 +157,7 @@ class TurtleBro():
                 return
             rospy.sleep(0.05)
 
-    def __goto(self, x, y, theta):
+    def __goto(self, x, y):
         heading = self.__get_turn_angle_to_point(x, y)
         distance = self.__get_distance_to_point(x, y)
         self.__turn(heading)
@@ -318,7 +322,7 @@ class TurtleBro():
     def __vel_x_move_value(self, speed, init_x, curent_x, aim_x):
         fixed_inklin = 0.01 #fixed distance (in m.) there acceleration/decceleration is performing
         if (curent_x == init_x):
-            return 0.01
+            return 0.03
         elif (curent_x < init_x):
             return (init_x - curent_x) * speed
         elif (curent_x > aim_x):
@@ -330,31 +334,31 @@ class TurtleBro():
         else:
             return speed
         
-    def __vel_z_turn_value(self, speed, init_x, curent_x, aim_x):
-        fixed_inklin = 0.08 #fixed angle (in deg.) there acceleration/decceleration is performing
-        Kp = 2
-        if (curent_x == init_x):
-            return 0.01
-        elif (curent_x < init_x):
-            return (init_x - curent_x) * speed * Kp
-        elif (curent_x > aim_x):
-            return 0
-        elif ((curent_x - init_x) < fixed_inklin):
-            return ((curent_x - init_x) / fixed_inklin) * speed * Kp
-        elif((aim_x - curent_x) < fixed_inklin):
-            return (aim_x - curent_x) * speed * Kp
-        else:
-            return speed
+    # def __vel_z_turn_value(self, speed, init_x, curent_x, aim_x):
+    #     fixed_inklin = 0.08 #fixed angle (in deg.) there acceleration/decceleration is performing
+    #     Kp = 2
+    #     if (curent_x == init_x):
+    #         return 0.01
+    #     elif (curent_x < init_x):
+    #         return (init_x - curent_x) * speed * Kp
+    #     elif (curent_x > aim_x):
+    #         return 0
+    #     elif ((curent_x - init_x) < fixed_inklin):
+    #         return ((curent_x - init_x) / fixed_inklin) * speed * Kp
+    #     elif((aim_x - curent_x) < fixed_inklin):
+    #         return (aim_x - curent_x) * speed * Kp
+    #     else:
+    #         return speed
 
-    def __get_angle_diff(self, prev_orientation, current_orientation):
-        prev_q = [prev_orientation.x, prev_orientation.y,
-                    prev_orientation.z, prev_orientation.w]
-        current_q = [current_orientation.x, current_orientation.y,
-                        current_orientation.z, current_orientation.w]
+    # def __get_angle_diff(self, prev_orientation, current_orientation):
+    #     prev_q = [prev_orientation.x, prev_orientation.y,
+    #                 prev_orientation.z, prev_orientation.w]
+    #     current_q = [current_orientation.x, current_orientation.y,
+    #                     current_orientation.z, current_orientation.w]
 
-        delta_q = quaternion_multiply(prev_q, quaternion_inverse(current_q))
-        (_, _, yaw) = euler_from_quaternion(delta_q)
-        return -yaw
+    #     delta_q = quaternion_multiply(prev_q, quaternion_inverse(current_q))
+    #     (_, _, yaw) = euler_from_quaternion(delta_q)
+    #     return -yaw
 
     def __get_turn_angle_to_point(self, x, y):
         current_q = [self.odom.pose.pose.orientation.x, self.odom.pose.pose.orientation.y,
@@ -368,25 +372,13 @@ class TurtleBro():
         distance = math.hypot((self.odom.pose.pose.position.x - x),(self.odom.pose.pose.position.y - y))
         return distance
 
+
+
 class TurtleNav(TurtleBro):
     """
     Робот осуществляющий передвижения при помощи автономной навигации. 
     Умеет:
-    ехать на определенные координаты (x,y) и theta(опционально) угол поворота после того, как робот приедет на эти координаты - goto(x,y, theta)
-    Кроме того доступны все остальные команды простого робота:
-    ехать вперед - forward()
-    назад - backward()
-    поворачивать направо и налево - right(), left()
-    ехать на определенные координаты (x,y) - goto(x,y)
-    получить текущие координаты x,y = tb.coords
-    зажигать светодиоды - color("цвет")   "цвет" может быть = "red", "green", "blue", "yellow", "white", "off"
-    записать фото - save_photo()
-    получить фото с камеры как массив cv2 a = tb.photo
-    записывать звук - record()
-    измерять дистанцию - lidar_distance()
-    вызывать пользовательские функции при нажатии на кнопку - call()
-    произносить фразы - say()
-    находиться в режиме ожидания - wait()
+    Тоже что и базовый класс TurtleBro, но едет по навигации
     """
 
     def __init__(self):
@@ -408,7 +400,7 @@ class TurtleNav(TurtleBro):
 
         return goal
 
-    def goto(self, x, y, theta):
+    def goto(self, x, y, theta = 0):
         """
         Переопределенная функция базового класса для езды по навигации
         """
@@ -519,3 +511,7 @@ class Utility():
 
     def clamp(min_val, value, max_val):
         return max(min_val, min(value, max_val))
+
+    def play(self, filename):
+        assert filename, "Файл для воспроизведения не задан"
+        p = subprocess.Popen(["aplay", "/home/pi/" + filename]) 
