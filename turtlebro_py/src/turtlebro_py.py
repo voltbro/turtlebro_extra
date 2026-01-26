@@ -23,7 +23,7 @@ class TurtleBro():
     назад - backward()
     поворачивать направо и налево - right(), left()
     ехать на определенные координаты (x,y) - goto(x,y)
-    получить текущие координаты x,y = tb.coords
+    получить текущую позицию x, y, theta = tb.pose
     зажигать светодиоды - color("цвет")   "цвет" может быть = "red", "green", "blue", "yellow", "white", "off"
     записать фото - save_photo()
     получить фото с камеры как массив cv2 a = tb.photo
@@ -87,6 +87,9 @@ class TurtleBro():
     def goto(self, x, y):
         self.__goto(x, y)
 
+    def turn(self, degrees):
+        self.__turn(degrees)
+
     def call(self, name, button = 24):
         self.u.call(name, button)
     
@@ -100,8 +103,9 @@ class TurtleBro():
         self.u.photo(1, name)
 
     @property
-    def coords(self):
-        return self.odom.pose.pose.position.x, self.odom.pose.pose.position.y
+    def pose(self):
+        return (self.odom.pose.pose.position.x, self.odom.pose.pose.position.y, 
+        (2*math.degrees(math.asin(self.odom.pose.pose.orientation.z)*math.copysign(1,self.odom.pose.pose.orientation.w))))
 
     @property
     def photo(self):
@@ -432,7 +436,8 @@ class Utility():
         self.speech_service = rospy.ServiceProxy('festival_speech', Speech)
     
     def __del__(self):
-        self.color("off")
+        pass
+        #self.color("off")
 
     def __subscriber_scan_cb(self, msg):
         self.scan = msg
